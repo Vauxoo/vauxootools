@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Vauxoo Tools'
-copyright = u'2014, Nhomar Hernandez'
+copyright = u'2014, Vauxoo'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

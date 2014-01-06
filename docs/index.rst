@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Vauxoo Tools's documentation!
-======================================
+Vauxoo Tools documentation!
+===========================
 
 Contents:
 
@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
 
    readme
+   howto
    installation
    usage
    contributing
