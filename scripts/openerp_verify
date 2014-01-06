@@ -1,0 +1,21 @@
+#! /usr/bin/env python
+import oerplib
+import logging
+from vauxootools.vauxootools import VauxooTools
+
+def test_server(host, port):
+    oerp = oerplib.OERP(host, protocol='xmlrpc', port=port)
+    oerp.db.list()
+    return True
+
+if __name__ == '__main__':
+
+    configuration = VauxooTools(app_name='openerp_verify',
+            usage_message="%prog [OPTIONS]",
+            options=['hostname', 'port'], log=True)
+    _logger=logging.getLogger('openerp_test')
+    host = configuration.get_hostname()
+    port = configuration.get_port()
+    if test_server(host, port):
+        configuration.logger.info('Test pass correctly Server: http://%s:%s' % (host, port))
+
