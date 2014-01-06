@@ -18,6 +18,14 @@ Contents:
    authors
    history
 
+Source Code and Examples:
+-------------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   modules
+
 Indices and tables
 ==================
 
