@@ -72,7 +72,8 @@ class VauxooTools(object):
         self.logger.setLevel(self.loglevel.upper())
         formatter = logging.Formatter('%(levelname)s:[%(asctime)s] - %(name)s - %(message)s')
         ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
+        if self.log:
+            self.logger.addHandler(ch)
 
     def get_options(self):
         '''With this method we will be pre-parsing options for our program,
