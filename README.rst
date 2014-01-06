@@ -1,6 +1,6 @@
-===============================
+============
 Vauxoo Tools
-===============================
+============
 
 .. image:: https://badge.fury.io/py/vauxootools.png
     :target: http://badge.fury.io/py/vauxootools
@@ -12,12 +12,14 @@ Vauxoo Tools
         :target: https://crate.io/packages/vauxootools?version=latest
 
 
-Tools to work with python and OpenERP
+Tools to work with python and OpenERP.
+
 
 * Free software: BSD license
-* Documentation: http://vauxootools.rtfd.org.
+* Documentation: http://vauxootools.vauxoo.com.
 
 Features
 --------
 
-* TODO
+* ConfigGlue ready pre-procesed with minimal parameters to work with an openerp
+  xml-rpc script.

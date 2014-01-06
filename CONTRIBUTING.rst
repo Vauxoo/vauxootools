@@ -43,7 +43,7 @@ articles, and such.
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/nhomar/vauxootools/issues.
+The best way to send feedback is to file an issue at https://github.com/vauxoo/vauxootools/issues.
 
 If you are proposing a feature:
 
