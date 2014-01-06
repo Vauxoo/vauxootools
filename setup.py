@@ -29,6 +29,9 @@ setup(
     packages=[
         'vauxootools',
     ],
+    scripts = [
+        'scripts/openerp_verify',
+    ],
     package_dir={'vauxootools': 'vauxootools'},
     include_package_data=True,
     install_requires=requirements,

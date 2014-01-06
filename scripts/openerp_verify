@@ -6,6 +6,8 @@ from vauxootools.vauxootools import VauxooTools
 def test_server(host, port):
     oerp = oerplib.OERP(host, protocol='xmlrpc', port=port)
     oerp.db.list()
+    #TODO: Log correctly the failure, now the algorithm to parse the logfile
+    #need to be done separately due to the fail moment
     return True
 
 if __name__ == '__main__':
