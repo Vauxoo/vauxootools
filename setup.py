@@ -15,6 +15,7 @@ if sys.argv[-1] == 'publish':
     sys.exit()
 
 readme = open('README.rst').read()
+requirements = open('requirements.txt').readlines()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
 setup(
@@ -30,8 +31,7 @@ setup(
     ],
     package_dir={'vauxootools': 'vauxootools'},
     include_package_data=True,
-    install_requires=[
-    ],
+    install_requires=requirements,
     license="BSD",
     zip_safe=False,
     keywords='vauxootools',
