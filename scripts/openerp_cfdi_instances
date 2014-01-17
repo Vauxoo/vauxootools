@@ -1,0 +1,61 @@
+#! /usr/bin/env python
+import oerplib
+import logging
+from vauxootools.vauxootools import VauxooTools
+from configglue import glue, schema, app, parser
+from vauxootools.vauxootools import VxConfig
+
+class VxConfig_servers(VxConfig):
+    '''
+    This class is to instanciate the `configglue`_ options to manage the
+    configuration file and optparsers toghether. You will be able to load the
+    configuration option from the command line and some of this 3 paths.::
+
+        /etc/xdg/vauxootools/vauxootools.cfg
+        /home/<user>/.config/vauxootools/vauxootools.cfg
+        ./local.cfg
+
+    The objective of this class is give a generic way to create all the config
+    options you need almost always to interact openerp with.
+
+    So as this is a normal python class you can always inherit it from your own
+    script/tool and extend what you need.
+
+    See vauxootools --help to read the configuration options available, you can
+    create this files as any normal text file with the ini syntax.
+
+    You can see below some options.
+
+    .. _configglue: http://pythonhosted.org/configglue/
+    '''
+
+    second_hostname = schema.StringOption(short_name='-SH', default='localhost',
+            help='Hostname of your secondary OpenERP server.')
+    second_dbname = schema.StringOption(short_name='-SD', default='development',
+            help='Secondary data base name where your secondary OpenERP has the information you need.')
+    second_username = schema.StringOption(short_name='-su', default='demo',
+            help='Secondary user name to connect to the database')
+    second_password = schema.StringOption(short_name='-sp', default='demo',
+            help='Password of the secondary username provided.')
+    second_port = schema.IntOption(short_name='-SP', default=8069,
+            help='Secondary port where your secondary openerp is serving the web-service.')
+
+
+def test_server(host, port):
+    oerp = oerplib.OERP(host, protocol='xmlrpc', port=port)
+    oerp.db.list()
+    #TODO: Log correctly the failure, now the algorithm to parse the logfile
+    #need to be done separately due to the fail moment
+    return True
+
+if __name__ == '__main__':
+
+    configuration = VauxooTools(app_name='openerp_verify',
+            usage_message="%prog [OPTIONS]",
+            options=['hostname', 'port'], log=True, vx_instance=VxConfig_servers)
+    _logger=logging.getLogger('openerp_test')
+    host = configuration.get_hostname()
+    port = configuration.get_port()
+    if test_server(host, port):
+        configuration.logger.info('Test pass correctly Server: http://%s:%s' % (host, port))
+
