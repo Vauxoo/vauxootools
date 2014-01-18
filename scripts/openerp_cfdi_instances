@@ -170,12 +170,18 @@ class Create_Instance(object):
         @param con: Oerplib object with server conection
         @param admin_pass: String with te super admin password to create database
         @param db_name: String with name to the new database
-        @param db_password: String with the admin passwrd to the new database
+        @param db_password: String with the admin password to the new database
         return False o a dict with login information
         '''
         login = False
         try:
-            login = con.db.create_and_wait(admin_pass, db_name, admin_passwd='1234')
+            if not db_name in con.db.list():
+                configuration.logger.info("Creating db %s" % db_name)
+                login = con.db.create_and_wait(admin_pass, db_name, admin_passwd='1234')
+            else:
+                configuration.logger.error("We can't create the database %s because there is a "
+                                           "database with the same name" % db_name)
+
         except Exception, e:
             configuration.logger.error("We can't create the database %s" % db_name)
             configuration.logger.error(e)
@@ -196,10 +202,24 @@ class Create_Instance(object):
                 else:
                     configuration.logger.warning("The lead %s don't exist" % i)
 
-
-        
+    def install_modules(self, server, modules):
+        '''
+        Install modules sent
+        @param server: Oerplib object of cfdi instance
+        @param modules: List with modules name that will be install
+        '''
+        for module in modules:
+            ids = server.search('ir.module.module', [('name', '=', module)])
+            if ids:
+                configuration.logger.info("Installing module %s" % module)
+                server.execute('ir.module.module', 'button_immediate_install', ids)
+            else:
+                configuration.logger.warnning("The module %s is not avaliable in the "
+                                              "server" % module)
 
     def main(self):
+        module_list = ['l10n_mx_facturae_pac_finkok', 'l10n_mx_cfdi_register', 'auth_crypt', 
+                       'opencfdi_base']
 
         lead_server = self.server_login(self.hostname, self.username, self.password, self.dbname,
                                         self.port)
@@ -207,10 +227,49 @@ class Create_Instance(object):
         if lead_server and cfdi_server:
             for lead in self.prepare_lead_ids(self.il, lead_server):
                 lead_brw = lead_server.browse('crm.lead', lead)
+                if lead_brw.instance_created:
+                    break
                 cfdi_info = eval(lead_brw.cfdi_info)
+                db_name = 'cfdi_%s' % cfdi_info.get('name', '').lower().replace(' ', '')
+                login = self.create_database(cfdi_server, self.sp, db_name, '1234')
+                login = login and login[0]
+                if not login:
+                    break
+                try:
+                    cfdi_server.login(user=login.get('login'), passwd=login.get('password'),
+                                      database=db_name)
+                except Exception, e:
+                    configuration.logger.error(e)
+                    break
+
+                self.install_modules(cfdi_server, module_list)
+                try:
+                    user = getpass.getpass('Insert admin user to the new instance: ')
+                    passwd = getpass.getpass('Insert the admin password to the new instance: ')
+                    cfdi_server.login(user=user, passwd=passwd, database=db_name)
+                except Exception, e:
+                    configuration.logger.error(e)
+                    break
+
+                user_ids = cfdi_server.search('res.users', [('login', '=', 'admin_cfdi')])
+                user_ids and cfdi_server.write('res.users', user_ids,
+                                               {
+                                               'password':cfdi_info.get('passwd'),
+                                               'name':cfdi_info.get('name'),
+                                               'login':cfdi_info.get('email_from'),
+                                                })
+                partner_id = cfdi_server.user.company_id.partner_id
+                company_id = cfdi_server.user.company_id
+                cfdi_info.pop('user_id')
+                partner_id and cfdi_server.write('res.partner', [partner_id.id], cfdi_info)
+                company_id and cfdi_server.write('res.company', [company_id.id], 
+                                                {
+                                                    'name':cfdi_info.get('partner_name'),
+                                                    'vat':cfdi_info.get('vat'),
+                                                    })
+                
         return True
         
-
 
 def test_server(host, port):
     oerp = oerplib.OERP(host, protocol='xmlrpc', port=port)
