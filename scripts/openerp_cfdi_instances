@@ -5,6 +5,7 @@ from vauxootools.vauxootools import VauxooTools
 from configglue import glue, schema, app, parser
 from vauxootools.vauxootools import VxConfig
 from optparse import OptionParser
+import getpass
 
 class VxConfig_servers(VxConfig):
     '''
@@ -38,7 +39,7 @@ class VxConfig_servers(VxConfig):
             help='Secondary user name to connect to the database')
     sp = schema.StringOption(short_name='-sp', default='demo',
             help='Password of the secondary username provided.')
-    sp = schema.IntOption(short_name='-sp', default=8069,
+    spo = schema.IntOption(short_name='-spo', default=8069,
             help='Secondary port where your secondary openerp is serving the web-service.')
     il = schema.ListOption(short_name='-il', default=[0], remove_duplicates=True,
             help='List of id or ids separate by comma without spaces of the leads that generated the task of '
@@ -76,7 +77,7 @@ class VauxooTools_servers(VauxooTools):
         >>> print result
         8069
         '''
-        return self.params.get('sp')
+        return self.params.get('spo')
 
     def get_sdb(self):
         '''openerp data base what we will conect to.
@@ -121,12 +122,137 @@ class VauxooTools_servers(VauxooTools):
         '''
         return self.params.get('il')
 
+class Create_Instance(object):
+
+    def __init__(self, dbname, hostname, port, username, sd, sh, spo, su, il):
+        self.dbname = dbname
+        self.hostname = hostname
+        self.password = getpass.getpass('Insert the password for user %s: ' % username)
+        self.sp = getpass.getpass('Insert the admin password for server %s: ' % hostname)
+        self.il = il
+        self.port = port
+        self.sd = sd
+        self.sh = sh
+        self.spo = spo
+        self.su = su
+        self.username = username
+
+    def server_login(self, host, user, password, database, port):
+        '''
+        Create an oerplib obejct logged with logged with parameters obtained for this methos
+        @param host: String with the server location
+        @param user: String with the user login 
+        @param password: String with the password for the sent user
+        @param database: String with database name to get or set new records
+        @param port: Integer with port to which the server works
+
+        return a oerplib login object or False if any parameter is wrong
+        '''
+        
+        con = oerplib.OERP(
+        server=host, 
+        database=database, 
+        port=int(port), 
+        )  
+        try: 
+            con.login(user, password)
+            configuration.logger.info("Logged with user %s" % (user))
+        except Exception, e:
+            con = False
+            configuration.logger.error("We can't do login in the iserver: "
+                                       "http://%s:%s with user %s" % (hostname, port, user))
+            configuration.logger.error(e)
+        return con
+    
+    def create_database(self, con, admin_pass, db_name, db_password):
+        '''
+        Creates a new databae to install modules for create a cfdi_instance
+        @param con: Oerplib object with server conection
+        @param admin_pass: String with te super admin password to create database
+        @param db_name: String with name to the new database
+        @param db_password: String with the admin passwrd to the new database
+        return False o a dict with login information
+        '''
+        login = False
+        try:
+            login = con.db.create_and_wait(admin_pass, db_name, admin_passwd='1234')
+        except Exception, e:
+            configuration.logger.error("We can't create the database %s" % db_name)
+            configuration.logger.error(e)
+            
+        return login
+        
+    def prepare_lead_ids(self, leads, server):
+        '''
+        Verifies the lead ids to be sure than all are valid ids
+        @param leads: List with possible lead ids 
+        @param server: Oerplib object with server to check if the lead exist
+        return List with ids
+        '''
+        for i in leads:
+            if str(i).isdigit():
+                if server.execute('crm.lead', 'exists', int(i)):
+                    yield(int(i))
+                else:
+                    configuration.logger.warning("The lead %s don't exist" % i)
+
+
+        
+
+    def main(self):
+
+        lead_server = self.server_login(self.hostname, self.username, self.password, self.dbname,
+                                        self.port)
+        cfdi_server = test_server(self.sh, self.spo)
+        if lead_server and cfdi_server:
+            for lead in self.prepare_lead_ids(self.il, lead_server):
+                lead_brw = lead_server.browse('crm.lead', lead)
+                cfdi_info = eval(lead_brw.cfdi_info)
+        return True
+        
+
+
+def test_server(host, port):
+    oerp = oerplib.OERP(host, protocol='xmlrpc', port=port)
+    oerp.db.list()
+    #TODO: Log correctly the failure, now the algorithm to parse the logfile
+    #need to be done separately due to the fail moment
+    return oerp
+
 if __name__ == '__main__':
 
-    configuration = VauxooTools_servers(app_name='openerp_verify',
-            usage_message="Generated by VauxooTools",
-            options=['hostname', 'port', 'sd', 'il'], log=True, vx_instance=VxConfig_servers)
-    _logger=logging.getLogger('openerp_test')
-    host = configuration.get_hostname()
-    port = configuration.get_leads()
+    configuration = VauxooTools_servers(app_name='openrp_cfdi_intances',
+                                        usage_message="Generated by VauxooTools",
+                                        options=['dbname', 'hostname', 'il', 'password', 'port',
+                                                 'sd', 'sh', 'spo', 'sp', 'su', 'username'],
+                                        log=True, vx_instance=VxConfig_servers)
 
+    _logger = logging.getLogger('openerp_cfdi')
+    hostname = configuration.get_hostname()
+    dbname = configuration.get_db()
+    port = configuration.get_port()
+    user = configuration.get_user()
+    pwd = configuration.get_pwd()
+    shost = configuration.get_shostname()
+    sdb = configuration.get_sdb()
+    sport = configuration.get_sport()
+    suser = configuration.get_suser()
+    spwd = configuration.get_spwd()
+    lead_ids = configuration.get_leads()
+    test = test1 = True
+    try:
+        test = test_server(hostname, port)
+    except:
+        test = False 
+        configuration.logger.error("We can't connect to the server: http://%s:%s" % (hostname, port))
+    try:
+        test1 = test_server(shost, sport)
+    except:
+        test1 = False 
+        configuration.logger.error("We can't connect to the server: http://%s:%s" % (shost, sport))
+    if not test or not test1:
+        configuration.logger.error("Please review again the parameters sent")
+    else:
+        ci = Create_Instance(dbname, hostname, port, user, sdb, shost, sport, suser, lead_ids)
+        ci.main()
+        
