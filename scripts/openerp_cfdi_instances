@@ -8,7 +8,8 @@ import getpass
 class CreateInstance(object):
     def main(self, host1, host2, ids, logger):
         module_list = ['l10n_mx_facturae_pac_finkok', 'portal_crm_vauxoo',
-                        'l10n_mx_cfdi_register', 'auth_crypt', 'opencfdi_base']
+                       'web_bootstrap3', 'l10n_mx_cfdi_register',
+                       'auth_crypt', 'opencfdi_base']
 
         lead_server = host1.server_login(host=host1.hostname,
                                          user=host1.username,
