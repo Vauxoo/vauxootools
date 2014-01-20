@@ -1,20 +1,31 @@
 #! /usr/bin/env python
 import oerplib
-import getpass
 
 class Instance(object):
     '''
      Return an Instance obj for that you can take the control about OERP lib
      objects and show logger obj with process error
-     >>> import oerplib
-     >>> con = oerplib.OERP('localhost', protocol='netrpc', port=8070)
+     >>> from vauxootools import VauxooToolsServers
+     >>> from instance import Instance
+     >>> configuration = VauxooToolsServers(app_name='App Test',
+     ...                  usage_message="Created by VauxooTools",
+     ...                  options=['dbname', 'hostname', 'il', 'password',
+     ...                           'port', 'sd', 'sh', 'spo', 'sp', 'su',
+     ...                           'username'])
+
+     configuration is a vauxootools object with all sent manage parameter
+
+     >>> con = Instance(dbname='localhost', hostname='localhost',
+     ...                port=8070, username='admin',
+     ...                logger=configuration.logger)
+
+     con is an oerplib wrapper to take control of traceback error
     '''
 
     def __init__(self, **kwargs):
         self.dbname = kwargs.get('dbname')
         self.hostname = kwargs.get('hostname')
-        self.password = kwargs.get('passwd', False) or getpass.getpass(
-            'Insert the password for user %s: ' % kwargs.get('username'))
+        self.password = kwargs.get('passwd', 'admin')
         self.port = kwargs.get('port')
         self.username = kwargs.get('username')
         self.logger = kwargs.get('logger')
@@ -23,14 +34,31 @@ class Instance(object):
         '''
         Create an oerplib obejct logged with logged with parameters obtained
         for this methos
+
+         >>> from vauxootools import VauxooToolsServers
+         >>> from instance import Instance
+         >>> configuration = VauxooToolsServers(app_name='App Test',
+         ...                  usage_message="Created by VauxooTools",
+         ...                  options=['dbname', 'hostname', 'il', 'password',
+         ...                           'port', 'sd', 'sh', 'spo', 'sp', 'su',
+         ...                           'username'])
+
+         configuration is a vauxootools object with all sent manage parameter
+
+         >>> con = Instance(dbname='localhost', hostname='localhost',
+         ...                port=8070, username='admin',
+         ...                logger=configuration.logger)
+
+         >>> login = con.server_login(host='localhost', user='admin',
+         ...                          password='admin',
+         ...                          database='test_db', port=8070)
+
         @param host: String with the server location
         @param user: String with the user login
         @param password: String with the password for the sent user
         @param database: String with database name to get or set new records
         @param port: Integer with port to which the server works
-        >>> user = con.login('admin', 'admin', database='db_name')
-        >>> user.name
-        u'Administrator'
+
 
         :raise: :class:`oerplib.error.RPCError`
         :return: a oerplib login object or False if any parameter is wrong
@@ -56,13 +84,30 @@ class Instance(object):
     def create_database(self, con, admin_pass, db_name):
         '''
         Creates a new databae to install modules for create a cfdi_instance
+
+         >>> from vauxootools import VauxooToolsServers
+         >>> from instance import Instance
+         >>> configuration = VauxooToolsServers(app_name='App Test',
+         ...                  usage_message="Created by VauxooTools",
+         ...                  options=['dbname', 'hostname', 'il', 'password',
+         ...                           'port', 'sd', 'sh', 'spo', 'sp', 'su',
+         ...                           'username'])
+
+         configuration is a vauxootools object with all sent manage parameter
+
+         >>> con = Instance(dbname='localhost', hostname='localhost',
+         ...                port=8070, username='admin',
+         ...                logger=configuration.logger)
+
+         >>> login = con.server_login(host='localhost', user='admin',
+         ...                          password='admin',
+         ...                          database='test_db', port=8070)
+         >>> db = con.create_database(login, 'admin', '1234')
+
         @param con: Oerplib object with server conection
         @param admin_pass: String with te super admin password to create
         database
         @param db_name: String with name to the new database
-
-        >>> con.db.create_and_wait('1234', 'test_db', 'testp')
-        [{'login': u'admin', 'password': u'testp'}]
 
         :return: False o a dict with login information
         :raise: :class:`oerplib.error.RPCError`
@@ -86,12 +131,33 @@ class Instance(object):
     def check_ids(self, ids, server, model='crm.lead'):
         '''
         Verifies the lead ids to be sure than all are valid ids
+
+
+         >>> from vauxootools import VauxooToolsServers
+         >>> from instance import Instance
+         >>> configuration = VauxooToolsServers(app_name='App Test',
+         ...                  usage_message="Created by VauxooTools",
+         ...                  options=['dbname', 'hostname', 'il', 'password',
+         ...                           'port', 'sd', 'sh', 'spo', 'sp', 'su',
+         ...                           'username'])
+
+         configuration is a vauxootools object with all sent manage parameter
+
+         >>> con = Instance(dbname='localhost', hostname='localhost',
+         ...                port=8070, username='admin',
+         ...                logger=configuration.logger)
+
+         >>> login = con.server_login(host=con.hostname, user='admin',
+         ...                          password='admin',
+         ...                          database='test_db', port=con.port)
+         >>> for i in  con.check_ids([1], login, 'res.users'):
+         ...     print i
+         1
+
         @param leads: List with possible lead ids
         @param server: Oerplib object with server to check if the lead exist
         @param model: String with _name module to check ids
 
-        >>> con.execute('res.users', 'exists', 1)
-        [1]
 
         :return: List with existing ids
         :raise: :class:`oerplib.error.RPCError`
@@ -106,12 +172,30 @@ class Instance(object):
     def install_modules(self, server, modules):
         '''
         Install modules sent
+
+
+         >>> from vauxootools import VauxooToolsServers
+         >>> from instance import Instance
+         >>> configuration = VauxooToolsServers(app_name='App Test',
+         ...                  usage_message="Created by VauxooTools",
+         ...                  options=['dbname', 'hostname', 'il', 'password',
+         ...                           'port', 'sd', 'sh', 'spo', 'sp', 'su',
+         ...                           'username'])
+
+         configuration is a vauxootools object with all sent manage parameter
+
+         >>> con = Instance(dbname='localhost', hostname='localhost',
+         ...                port=8070, username='admin',
+         ...                logger=configuration.logger)
+
+         >>> login = con.server_login(host=con.hostname, user='admin',
+         ...                          password='admin',
+         ...                          database='test_db', port=con.port)
+         >>> con.install_modules(login, ['account'])
+
         @param server: Oerplib object of cfdi instance
         @param modules: List with modules name that will be install
 
-        >>> ids = con.search('ir.module.module', [('name', '=', module)])
-        >>> ids and con.execute('ir.module.module', 'button_immediate_install',
-        ...                     ids)
 
         :raise: :class:`oerplib.error.RPCError`
         '''
@@ -124,3 +208,6 @@ class Instance(object):
             else:
                 self.logger.warnning("The module %s is not avaliable in the "
                                      "server" % module)
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

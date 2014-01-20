@@ -16,9 +16,10 @@ class CreateInstance(object):
                                          password=host1.password,
                                          database=host1.dbname,
                                          port=host1.port)
+
         cfdi_server = test_server(host2.hostname, host2.port)
         if lead_server and cfdi_server:
-            for lead in host1.check_ids(ids, lead_server):
+            for lead in host1.check_ids(ids, lead_server, 'crm.lead'):
                 lead_brw = lead_server.browse('crm.lead', lead)
                 if lead_brw.instance_created:
                     break
