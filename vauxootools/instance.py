@@ -23,6 +23,25 @@ class Instance(object):
     '''
 
     def __init__(self, **kwargs):
+        '''
+        Class's Builder to set the main values and use them in all methods for
+        this class. When you instance the 'Instance' Class you must set each
+        variable in the instance declaration
+
+        Variable that must get this Class:
+
+        dbname = String with name of the database to use
+        hostname = String with  OpenERP server location
+        port = String with port which OpenERP works
+        username = String user name to do login in OpenERP
+        passwd = String with passwd of user to do login
+        logger = Logger obj to show error, warnning and info messages
+
+        from instance import Instance
+        instance_obj = Instance(dbname='localhost', hostname='localhost',
+                                port=8070, username='admin', passwd='admin',
+                                logger=loggeri_obj)
+        '''
         self.dbname = kwargs.get('dbname')
         self.hostname = kwargs.get('hostname')
         self.password = kwargs.get('passwd', 'admin')
@@ -167,7 +186,8 @@ class Instance(object):
                 if server.execute(model, 'exists', int(i)):
                     yield(int(i))
                 else:
-                    self.logger.error("The record with id %s don't exist" % i)
+                    self.logger.error("The record id %s in the model "
+                                      "%s don't exist" % (i, model))
 
     def install_modules(self, server, modules):
         '''
