@@ -87,7 +87,7 @@ def test_server(host, port):
 
 if __name__ == '__main__':
 
-    configuration = VauxooToolsServers(app_name='openrp_cfdi_intances',
+    configuration = VauxooToolsServers(app_name='openerp_cfdi_instances',
                                        usage_message="Created by VauxooTools",
                                        options=['dbname', 'hostname', 'il',
                                                 'password', 'port', 'sd',
@@ -120,7 +120,7 @@ if __name__ == '__main__':
         configuration.logger.error(
             "We can't connect to the server: http://%s:%s" % (shost, sport))
     if not test or not test1:
-        configuration.logger.error("Please review again the parameters sent")
+        configuration.logger.error("Please review again the sent parameters ")
     else:
         host1 = Instance(dbname=dbname, hostname=hostname, port=port,
                          username=user, logger=configuration.logger)
