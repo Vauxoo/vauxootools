@@ -28,7 +28,8 @@ class CreateInstance(object):
                 cfdi_info = eval(lead_brw.cfdi_info)
                 db_name = 'cfdi_%s' % \
                     cfdi_info.get('name', '').lower().replace(' ', '')
-                login = host2.create_database(cfdi_server, host2.password,
+                login = host2.create_database(cfdi_server,
+                                              host2.sadminpwd,
                                               db_name)
                 login = login and login[0]
                 if not login:
@@ -43,10 +44,8 @@ class CreateInstance(object):
 
                 host2.install_modules(cfdi_server, module_list)
                 try:
-                    user = getpass.getpass('Insert admin user to the new '
-                                           'instance: ')
-                    passwd = getpass.getpass('Insert the admin password to '
-                                             'the new instance: ')
+                    user = host2.username 
+                    passwd = host2.password 
                     cfdi_server.login(user=user, passwd=passwd,
                                       database=db_name)
                 except Exception, error:
@@ -92,7 +91,7 @@ if __name__ == '__main__':
                                        options=['dbname', 'hostname', 'il',
                                                 'password', 'port', 'sd',
                                                 'sh', 'spo', 'sp', 'su',
-                                                'username'],
+                                                'username', 'sadminpwd'],
                                        log=True, vx_instance=VxConfigServers)
 
     hostname = configuration.get_hostname()
@@ -105,6 +104,7 @@ if __name__ == '__main__':
     sport = configuration.get_sport()
     suser = configuration.get_suser()
     spwd = configuration.get_spwd()
+    sadminpwd = configuration.get_sadminpwd()
     lead_ids = configuration.get_records()
     test = test1 = True
     try:
@@ -123,8 +123,10 @@ if __name__ == '__main__':
         configuration.logger.error("Please review again the sent parameters ")
     else:
         host1 = Instance(dbname=dbname, hostname=hostname, port=port,
-                         username=user, logger=configuration.logger)
+                         passwd=pwd, username=user,
+                         logger=configuration.logger)
         host2 = Instance(dbname=sdb, hostname=shost, port=sport,
-                         username=suser, logger=configuration.logger)
+                         passwd=spwd, username=suser, sadminpwd=sadminpwd,
+                         logger=configuration.logger)
         ci = CreateInstance()
         ci.main(host1, host2, lead_ids, configuration.logger)
