@@ -45,6 +45,7 @@ class Instance(object):
         self.dbname = kwargs.get('dbname')
         self.hostname = kwargs.get('hostname')
         self.password = kwargs.get('passwd', 'admin')
+        self.sadminpwd = kwargs.get('sadminpwd', 'admin')
         self.port = kwargs.get('port')
         self.username = kwargs.get('username')
         self.logger = kwargs.get('logger')
