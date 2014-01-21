@@ -5,7 +5,9 @@ from vauxootools.vauxootools import VxConfigServers
 from vauxootools.instance import Instance
 import getpass
 
+
 class CreateInstance(object):
+
     def main(self, host1, host2, ids, logger):
         module_list = ['l10n_mx_facturae_pac_finkok', 'portal_crm_vauxoo',
                        'web_bootstrap3', 'l10n_mx_cfdi_register',
@@ -25,7 +27,7 @@ class CreateInstance(object):
                     break
                 cfdi_info = eval(lead_brw.cfdi_info)
                 db_name = 'cfdi_%s' % \
-                             cfdi_info.get('name', '').lower().replace(' ', '')
+                    cfdi_info.get('name', '').lower().replace(' ', '')
                 login = host2.create_database(cfdi_server, host2.password,
                                               db_name)
                 login = login and login[0]
@@ -53,31 +55,34 @@ class CreateInstance(object):
 
                 user_ids = cfdi_server.search('res.users',
                                               [('login', '=', 'admin_cfdi')])
-                user_ids and cfdi_server.write('res.users', user_ids,
-                                               {
-                                           'password':cfdi_info.get('passwd'),
-                                           'name':cfdi_info.get('name'),
-                                           'login':cfdi_info.get('email_from'),
-                                                })
+                user_ids and \
+                    cfdi_server.write('res.users', user_ids,
+                                      {
+                                          'password': cfdi_info.get('passwd'),
+                                          'name': cfdi_info.get('name'),
+                                          'login': cfdi_info.get('email_from'),
+                                      })
                 partner_id = cfdi_server.user.company_id.partner_id
                 company_id = cfdi_server.user.company_id
                 cfdi_info.pop('user_id')
                 partner_id and cfdi_server.write('res.partner',
                                                  [partner_id.id], cfdi_info)
-                company_id and cfdi_server.write('res.company',
-                                                 [company_id.id],
-                                                {
-                                        'name':cfdi_info.get('partner_name'),
-                                        'vat':cfdi_info.get('vat'),
-                                                    })
+                company_id and \
+                    cfdi_server.write('res.company',
+                                      [company_id.id],
+                                      {
+                                          'name':
+                                          cfdi_info.get('partner_name'),
+                                          'vat': cfdi_info.get('vat'),
+                                      })
         return True
-        
+
 
 def test_server(host, port):
     oerp = oerplib.OERP(host, protocol='xmlrpc', port=port)
     oerp.db.list()
-    #TODO: Log correctly the failure, now the algorithm to parse the logfile
-    #need to be done separately due to the fail moment
+    # TODO: Log correctly the failure, now the algorithm to parse the logfile
+    # need to be done separately due to the fail moment
     return oerp
 
 if __name__ == '__main__':
@@ -85,10 +90,10 @@ if __name__ == '__main__':
     configuration = VauxooToolsServers(app_name='openrp_cfdi_intances',
                                        usage_message="Created by VauxooTools",
                                        options=['dbname', 'hostname', 'il',
-                                                 'password', 'port', 'sd',
-                                                 'sh', 'spo', 'sp', 'su',
-                                                 'username'],
-                                        log=True, vx_instance=VxConfigServers)
+                                                'password', 'port', 'sd',
+                                                'sh', 'spo', 'sp', 'su',
+                                                'username'],
+                                       log=True, vx_instance=VxConfigServers)
 
     hostname = configuration.get_hostname()
     dbname = configuration.get_db()
@@ -105,13 +110,15 @@ if __name__ == '__main__':
     try:
         test = test_server(hostname, port)
     except:
-        test = False 
-        configuration.logger.error("We can't connect to the server: http://%s:%s" % (hostname, port))
+        test = False
+        configuration.logger.error(
+            "We can't connect to the server: http://%s:%s" % (hostname, port))
     try:
         test1 = test_server(shost, sport)
     except:
-        test1 = False 
-        configuration.logger.error("We can't connect to the server: http://%s:%s" % (shost, sport))
+        test1 = False
+        configuration.logger.error(
+            "We can't connect to the server: http://%s:%s" % (shost, sport))
     if not test or not test1:
         configuration.logger.error("Please review again the parameters sent")
     else:
@@ -121,4 +128,3 @@ if __name__ == '__main__':
                          username=suser, logger=configuration.logger)
         ci = CreateInstance()
         ci.main(host1, host2, lead_ids, configuration.logger)
-        
