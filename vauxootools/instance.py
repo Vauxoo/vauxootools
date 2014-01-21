@@ -35,7 +35,7 @@ class Instance(object):
         port = String with port which OpenERP works
         username = String user name to do login in OpenERP
         passwd = String with passwd of user to do login
-        logger = Logger obj to show error, warnning and info messages
+        logger = Logger obj to show error, warning and info messages
 
         from instance import Instance
         instance_obj = Instance(dbname='localhost', hostname='localhost',
@@ -227,7 +227,7 @@ class Instance(object):
                 server.execute('ir.module.module',
                                'button_immediate_install', ids)
             else:
-                self.logger.warnning("The module %s is not avaliable in the "
+                self.logger.warning("The module %s is not avaliable in the "
                                      "server" % module)
 if __name__ == "__main__":
     import doctest
