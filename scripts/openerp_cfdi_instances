@@ -11,7 +11,7 @@ class CreateInstance(object):
     def main(self, host1, host2, ids, logger):
         module_list = ['l10n_mx_facturae_pac_finkok', 'portal_crm_vauxoo',
                        'web_bootstrap3', 'l10n_mx_cfdi_register',
-                       'auth_crypt', 'opencfdi_basic']
+                       'web_login_page_cfdi', 'auth_crypt', 'opencfdi_basic']
 
         lead_server = host1.server_login(host=host1.hostname,
                                          user=host1.username,
