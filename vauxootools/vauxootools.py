@@ -39,6 +39,8 @@ class VxConfig(schema.Schema):
             help='User name to connect to the database')
     password = schema.StringOption(short_name='p', default='demo',
             help='Password of the username provided.')
+    sadminpwd = schema.StringOption(short_name='S', default='demo',
+            help='Super Admin Password to create data base.')
     port = schema.IntOption(short_name='P', default=8069,
             help='Port where your openerp is serving the web-service.')
     logfile = schema.StringOption(short_name='l', default='vauxootools.log',
@@ -185,6 +187,17 @@ class VauxooTools(object):
         demo
         '''
         return self.params.get('password')
+
+    def get_sadminpwd(self):
+        '''openerp data base what we will conect to.
+
+        >>> configuration = VauxooTools(app_name='TestApi',
+        ...                             options=['sadminpwd', 'password'])
+        >>> result = configuration.get_sadminpwd()
+        >>> print result
+        demo
+        '''
+        return self.params.get('sadminpwd')
 
 class VxConfigServers(VxConfig):
     '''
