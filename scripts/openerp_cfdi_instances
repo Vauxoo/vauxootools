@@ -8,7 +8,47 @@ import getpass
 
 class CreateInstance(object):
 
+    def get_body_html(self, cfdi_info, cfdi_server, db_name):
+        '''
+        Create the body of mail messages that will be send when the proccess is
+        finished
+        @param cfdi_info: Dictionary with all information about users leads
+        @param cfdi_server: Oerplib object with the new instance created
+        @param db_name: String with database name
+        '''
+        base_url = cfdi_server.execute('ir.config_parameter',
+                                       'get_param', 'web.base.url',
+                                       '')
+            #src=https://docs.google.com/uc?id=0B4yfJJJSNrfuYmFjYTMyMzEtYmVhMS00YjA3LTkzNWQtMDIwMzcxZDllMzI5
+        body = """
+            <img                                                           
+             src="https://drive.google.com/uc?export=download&id=0B2kzKLGF6ZvLanhSeW80QVZVSzg" 
+            style="width:110px; padding: 2px 2px 2px;"/>                         
+            <div width="100px">                                                    
+                <div>                                                              
+                </div>                                                             
+                <div>                                                              
+                    <p>Hi %s</p>                                                   
+                </div>                                                             
+                <div>                                                              
+                    <p>Welcome to OpenCFDI and thanks for choose us</p>            
+                </div>                                                             
+                <hr width="700" align="left">                                     
+                <div>                                                                                                                                          
+                    <h3>Sign in to your account</h3>                               
+                    <a href="%s/?db=%s">%s/?db=%s</a>               
+                </div>                                                             
+                <div>                                                              
+                    <h3>Username</h3>                                              
+                    <a href="%s">%s</a>                                            
+                </div>                                                             
+            </div>                                                                 
+        """ % (cfdi_info.get('name'), base_url, db_name, base_url,
+               db_name, cfdi_info.get('email_from'), cfdi_info.get('email_from'))
+        return body
+
     def main(self, host1, host2, ids, logger):
+        
         module_list = ['l10n_mx_facturae_pac_finkok', 'portal_crm_vauxoo',
                        'web_bootstrap3', 'l10n_mx_cfdi_register',
                        'web_login_page_cfdi', 'auth_crypt', 'opencfdi_basic']
@@ -42,6 +82,7 @@ class CreateInstance(object):
                     logger.logger.error(error)
                     break
 
+
                 host2.install_modules(cfdi_server, module_list)
                 try:
                     user = host2.username 
@@ -74,6 +115,13 @@ class CreateInstance(object):
                                           cfdi_info.get('partner_name'),
                                           'vat': cfdi_info.get('vat'),
                                       })
+                body = self.get_body_html(cfdi_info, cfdi_server, db_name)
+                id = lead_server.create('mail.mail',
+                                        {'email_from':'jose@vauxoo.com',
+                                         'email_to':'jose@vauxoo.com',
+                                         'subject':'Welcome to OpenCFDI',
+                                         'body_html':body})
+                lead_server.execute('mail.mail', 'send', [id])
         return True
 
 
