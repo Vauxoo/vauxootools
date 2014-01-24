@@ -21,30 +21,41 @@ class CreateInstance(object):
                                        '')
             #src=https://docs.google.com/uc?id=0B4yfJJJSNrfuYmFjYTMyMzEtYmVhMS00YjA3LTkzNWQtMDIwMzcxZDllMzI5
         body = """
-            <img                                                           
-             src="https://drive.google.com/uc?export=download&id=0B2kzKLGF6ZvLanhSeW80QVZVSzg" 
-            style="width:110px; padding: 2px 2px 2px;"/>                         
-            <div width="100px">                                                    
-                <div>                                                              
-                </div>                                                             
-                <div>                                                              
-                    <p>Hi %s</p>                                                   
-                </div>                                                             
-                <div>                                                              
-                    <p>Welcome to OpenCFDI and thanks for choose us</p>            
-                </div>                                                             
-                <hr width="700" align="left">                                     
-                <div>                                                                                                                                          
-                    <h3>Sign in to your account</h3>                               
-                    <a href="%s/?db=%s">%s/?db=%s</a>               
-                </div>                                                             
-                <div>                                                              
-                    <h3>Username</h3>                                              
-                    <a href="%s">%s</a>                                            
-                </div>                                                             
-            </div>                                                                 
-        """ % (cfdi_info.get('name'), base_url, db_name, base_url,
-               db_name, cfdi_info.get('email_from'), cfdi_info.get('email_from'))
+<div>                                                                              
+      <p style="line-height:20px;font-size:15px;margin:6px 0 9px;font-family:&quot;Helvetica Neue&quot;,helvetica,arial,sans-serif">
+          <img alt="Logo email" src="http://www.cfdi.org/website_crm_opencfdi/static/src/img/opencfdi.png" style="width:150px">
+      </p>
+    <br>
+        <p style="line-height:20px;font-size:15px;margin:6px 0 9px;font-family:&quot;Helvetica Neue&quot;,helvetica,arial,sans-serif">Hola %s,</p>
+        <p style="line-height:20px;font-size:15px;margin:6px 0
+        9px;font-family:&quot;Helvetica
+        Neue&quot;,helvetica,arial,sans-serif">Bienvenido a <span class="il">OpenCFDI</span>!
+        </p>
+                                                                                   
+    <div style="margin:19px 0;padding:15px 0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;background:#ffffff">
+        <p style="line-height:20px;font-size:15px;margin:6px 0 9px;font-family:&quot;Helvetica Neue&quot;,helvetica,arial,sans-serif">
+            <b>Inicia sesion con tu cuenta:</b>
+            <br>
+                <a href="%s/?db=%s" target="_blank">https://<span class="il">cfdi</span>.com/login
+                </a>
+        </p>                                                                       
+                                                                                   
+    <p style="line-height:20px;font-size:15px;margin:6px 0 9px;font-family:&quot;Helvetica Neue&quot;,helvetica,arial,sans-serif">
+          <b>Nombre de Usuario:</b><br>                                                     
+          <a href="%s" target="_blank">%s</a>  
+        </p>                                                                       
+      </div>
+      <p style="line-height:20px;font-size:15px;margin:6px 0
+      9px;font-family:&quot;Helvetica
+      Neue&quot;,helvetica,arial,sans-serif">Esperamos que disfrutes esta oportunidad al usar <span class="il">OpenCFDI</span>.
+      </p>
+      <p style="line-height:20px;font-size:15px;margin:6px 0 9px;font-family:&quot;Helvetica Neue&quot;,helvetica,arial,sans-serif">
+        <a href="www.cfdi.org" target="_blank">Ayudanos a mejorar <span class="il">OpenCFDI</span> comentanos un poco mas acerca de tu empresa 
+        </a>
+      </p>
+</div>  
+        """ % (cfdi_info.get('name'), base_url, db_name, cfdi_info.get('email_from'), cfdi_info.get('email_from'))
+
         return body
 
     def main(self, host1, host2, ids, logger):
@@ -115,6 +126,7 @@ class CreateInstance(object):
                                           cfdi_info.get('partner_name'),
                                           'vat': cfdi_info.get('vat'),
                                       })
+
                 body = self.get_body_html(cfdi_info, cfdi_server, db_name)
                 id = lead_server.create('mail.mail',
                                         {'email_from':'jose@vauxoo.com',
