@@ -3,6 +3,7 @@ import oerplib
 from vauxootools.vauxootools import VauxooToolsServers
 from vauxootools.vauxootools import VxConfigServers
 from vauxootools.instance import Instance
+from vauxootools.serverenv import ServerEnviroment
 import getpass
 
 
@@ -180,7 +181,7 @@ if __name__ == '__main__':
         configuration.logger.error(
             "We can't connect to the server: http://%s:%s" % (shost, sport))
     if not test or not test1:
-        configuration.logger.error("Please review again the sent parameters ")
+        configuration.logger.error("Please review again the sent parameters")
     else:
         host1 = Instance(dbname=dbname, hostname=hostname, port=port,
                          passwd=pwd, username=user,
