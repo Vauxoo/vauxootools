@@ -47,6 +47,12 @@ class VxConfig(schema.Schema):
             help='Where do you want the log of this configuration.')
     loglevel = schema.StringOption(short_name='L', default='DEBUG',
             help='Where do you want the log of this configuration.')
+    serverpath = schema.StringOption(short_name='-serverpath', default='/tmp',
+            help='Absolute Path of folder that contain OpenERP server')
+    addonspath = schema.StringOption(short_name='-addonspath', default='/tmp',
+            help='Path of addons necessary to run server')
+    configpath = schema.StringOption(short_name='-configpath', default='/tmp',
+            help='Absolute Path of folder that contain the config files')
 
 class VauxooTools(object):
     '''
@@ -154,6 +160,37 @@ class VauxooTools(object):
         8069
         '''
         return self.params.get('port')
+
+    def get_serverpath(self):
+        '''Absolute Path of folder that contain OpenERP server.
+
+        >>> configuration = VauxooTools(app_name='TestApi',
+        ...                             options=['serverpath', 'port'])
+        >>> result = configuration.get_serverpath()
+        >>> print result
+        /tmp
+        '''
+        return self.params.get('serverpath')
+
+    def get_addonspath(self):
+        '''Path of addons necessary to run server
+        >>> configuration = VauxooTools(app_name='TestApi',
+        ...                             options=['addonspath', 'port'])
+        >>> result = configuration.get_addonspath()
+        >>> print result
+        /tmp
+        '''
+        return self.params.get('addonspath')
+
+    def get_configpath(self):
+        '''Path of addons necessary to run server
+        >>> configuration = VauxooTools(app_name='TestApi',
+        ...                             options=['configpath', 'port'])
+        >>> result = configuration.get_addonspath()
+        >>> print result
+        /tmp
+        '''
+        return self.params.get('configpath')
 
     def get_db(self):
         '''openerp data base what we will conect to.

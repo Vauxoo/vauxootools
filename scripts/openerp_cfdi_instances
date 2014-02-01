@@ -4,7 +4,9 @@ from vauxootools.vauxootools import VauxooToolsServers
 from vauxootools.vauxootools import VxConfigServers
 from vauxootools.instance import Instance
 from vauxootools.serverenv import ServerEnviroment
+import os
 import getpass
+import time
 
 
 class CreateInstance(object):
@@ -59,40 +61,22 @@ class CreateInstance(object):
 
         return body
 
-    def main(self, host1, host2, ids, logger):
+    def create_server_instance(self, lead_server, cfdi_server, cfdi_info,
+                               host2, db_name, logger):
         
         module_list = ['l10n_mx_facturae_pac_finkok', 'portal_crm_vauxoo',
                        'web_bootstrap3', 'l10n_mx_cfdi_register',
                        'web_login_page_cfdi', 'auth_crypt', 'opencfdi_basic']
 
-        lead_server = host1.server_login(host=host1.hostname,
-                                         user=host1.username,
-                                         password=host1.password,
-                                         database=host1.dbname,
-                                         port=host1.port)
 
-        cfdi_server = test_server(host2.hostname, host2.port)
         if lead_server and cfdi_server:
-            for lead in host1.check_ids(ids, lead_server, 'crm.lead'):
-                lead_brw = lead_server.browse('crm.lead', lead)
-                if lead_brw.instance_created:
-                    break
-                cfdi_info = eval(lead_brw.cfdi_info)
-                db_name = 'cfdi_%s' % \
-                    cfdi_info.get('name', '').lower().replace(' ', '')
-                login = host2.create_database(cfdi_server,
-                                              host2.sadminpwd,
-                                              db_name)
-                login = login and login[0]
-                if not login:
-                    break
                 try:
-                    cfdi_server.login(user=login.get('login'),
-                                      passwd=login.get('password'),
+                    cfdi_server.login(user='admin',
+                                      passwd='admin',
                                       database=db_name)
                 except Exception, error:
                     logger.logger.error(error)
-                    break
+                    return True
 
 
                 host2.install_modules(cfdi_server, module_list)
@@ -103,7 +87,7 @@ class CreateInstance(object):
                                       database=db_name)
                 except Exception, error:
                     logger.error(error)
-                    break
+                    return True
 
                 user_ids = cfdi_server.search('res.users',
                                               [('login', '=', 'admin_cfdi')])
@@ -138,9 +122,76 @@ class CreateInstance(object):
         return True
 
 
+    def main(self, configuration):
+        hostname = configuration.get_hostname()
+        dbname = configuration.get_db()
+        port = configuration.get_port()
+        user = configuration.get_user()
+        pwd = configuration.get_pwd()
+        shost = configuration.get_shostname()
+        sdb = configuration.get_sdb()
+        sport = configuration.get_sport()
+        suser = configuration.get_suser()
+        spwd = configuration.get_spwd()
+        sadminpwd = configuration.get_sadminpwd()
+        lead_ids = configuration.get_records()
+        serverpath = configuration.get_serverpath()
+        addonspath = configuration.get_addonspath()
+        configpath = configuration.get_configpath()
+        test = test1 = True
+        try:
+            test = test_server(hostname, port)
+        except:
+            test = False
+            configuration.logger.error(
+                "We can't connect to the server: http://%s:%s" % (hostname, port))
+
+        host1 = Instance(dbname=dbname, hostname=hostname, port=port,
+                         passwd=pwd, username=user,
+                         logger=configuration.logger)
+
+        lead_server = host1.server_login(host=host1.hostname,
+                                         user=host1.username,
+                                         password=host1.password,
+                                         database=host1.dbname,
+                                         port=host1.port)
+
+        for lead in host1.check_ids(lead_ids, lead_server, 'crm.lead'):
+            lead_brw = lead_server.browse('crm.lead', lead)
+            if lead_brw.instance_created or not lead_brw.cfdi_info:
+                break
+            cfdi_info = eval(lead_brw.cfdi_info)
+            email = cfdi_info.get('email_from')
+            username = email.split('@')
+            username = username and username[0]
+            db_name = 'cfdi_%s' % \
+                cfdi_info.get('name', '').lower().replace(' ', '')
+            enviroment = ServerEnviroment('vauxoo', username,
+                                          cfdi_info.get('passwd'),
+                                          addonspath, configpath, serverpath)
+            os.popen('python ../vauxootools/serverenv.py create_postgres_user '
+                     '%s %s %s' % (enviroment.puser, enviroment.name,
+                                   enviroment.password))
+
+            enviroment.create_linux_user()
+            enviroment.create_config_file()
+            enviroment.create_database(db_name)
+            enviroment.run_server()
+            time.sleep(60)
+            host2 = Instance(dbname=sdb, hostname=shost, port=enviroment.port,
+                             passwd=spwd, username=suser,
+                             sadminpwd='admin',
+                             logger=configuration.logger)
+            cfdi_server = test_server(host2.hostname, enviroment.port)
+            self.create_server_instance(lead_server, cfdi_server, cfdi_info,
+                                        host2, db_name, configuration.logger)
+
+        if not test:
+            configuration.logger.error("Please review again the sent parameters")
+        return True
+
 def test_server(host, port):
-    oerp = oerplib.OERP(host, protocol='xmlrpc', port=port)
-    oerp.db.list()
+    oerp = oerplib.OERP(host, port=port)
     # TODO: Log correctly the failure, now the algorithm to parse the logfile
     # need to be done separately due to the fail moment
     return oerp
@@ -152,42 +203,11 @@ if __name__ == '__main__':
                                        options=['dbname', 'hostname', 'il',
                                                 'password', 'port', 'sd',
                                                 'sh', 'spo', 'sp', 'su',
-                                                'username', 'sadminpwd'],
+                                                'username', 'sadminpwd',
+                                                'configpath', 'serverpath',
+                                                'addonspath'],
                                        log=True, vx_instance=VxConfigServers)
+    
+    CI = CreateInstance()
+    CI.main(configuration)
 
-    hostname = configuration.get_hostname()
-    dbname = configuration.get_db()
-    port = configuration.get_port()
-    user = configuration.get_user()
-    pwd = configuration.get_pwd()
-    shost = configuration.get_shostname()
-    sdb = configuration.get_sdb()
-    sport = configuration.get_sport()
-    suser = configuration.get_suser()
-    spwd = configuration.get_spwd()
-    sadminpwd = configuration.get_sadminpwd()
-    lead_ids = configuration.get_records()
-    test = test1 = True
-    try:
-        test = test_server(hostname, port)
-    except:
-        test = False
-        configuration.logger.error(
-            "We can't connect to the server: http://%s:%s" % (hostname, port))
-    try:
-        test1 = test_server(shost, sport)
-    except:
-        test1 = False
-        configuration.logger.error(
-            "We can't connect to the server: http://%s:%s" % (shost, sport))
-    if not test or not test1:
-        configuration.logger.error("Please review again the sent parameters")
-    else:
-        host1 = Instance(dbname=dbname, hostname=hostname, port=port,
-                         passwd=pwd, username=user,
-                         logger=configuration.logger)
-        host2 = Instance(dbname=sdb, hostname=shost, port=sport,
-                         passwd=spwd, username=suser, sadminpwd=sadminpwd,
-                         logger=configuration.logger)
-        ci = CreateInstance()
-        ci.main(host1, host2, lead_ids, configuration.logger)

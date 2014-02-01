@@ -88,6 +88,7 @@ class Instance(object):
             server=kwargs.get('host'),
             database=kwargs.get('database'),
             port=int(kwargs.get('port')),
+            timeout=999999999999999,
         )
         try:
             con.login(kwargs.get('user'), kwargs.get('password'))
@@ -189,6 +190,50 @@ class Instance(object):
                 else:
                     self.logger.error("The record id %s in the model "
                                       "%s don't exist" % (i, model))
+
+    def get_model_fields(self, ids, server, model='crm.lead', field='all'):
+        '''
+        Verifies the lead ids to be sure than all are valid ids
+
+
+         >>> from vauxootools import VauxooToolsServers
+         >>> from instance import Instance
+         >>> configuration = VauxooToolsServers(app_name='App Test',
+         ...                  usage_message="Created by VauxooTools",
+         ...                  options=['dbname', 'hostname', 'il', 'password',
+         ...                           'port', 'sd', 'sh', 'spo', 'sp', 'su',
+         ...                           'username'])
+
+         configuration is a vauxootools object with all sent manage parameter
+
+         >>> con = Instance(dbname='localhost', hostname='localhost',
+         ...                port=8070, username='admin',
+         ...                logger=configuration.logger)
+
+         >>> login = con.server_login(host=con.hostname, user='admin',
+         ...                          password='admin',
+         ...                          database='test_db', port=con.port)
+         >>> con.get_model_fields(1, login, 'res.users', 'name')
+         Administrator
+
+        @param ids: Integer with record id
+        @param server: Oerplib object with server to check if the lead exist
+        @param model: String with _name module to check ids
+        @param field: String with name field all by default
+
+
+        :return: Value of field or False is the field don't exist
+        :raise: :class:`oerplib.error.RPCError`
+        '''
+        fields = field == 'all' and [] or type(field) == list and field or \
+                 [field]
+        record = server.read(model, ids, fields)
+        if  field == 'all' and [] or type(field) == list:
+            return record
+        else:
+            return record.get(field, False)
+
+        return True
 
     def install_modules(self, server, modules):
         '''

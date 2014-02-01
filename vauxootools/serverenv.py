@@ -2,7 +2,7 @@
 import pwd, os
 import commands
 import sys
-import configparser
+import ConfigParser
 import openerp
 import random
 
@@ -38,6 +38,7 @@ class ServerEnviroment(object):
         self.server_path = server_path
         self.user_uid = 0
         self.port = 8069
+        self.database = False
 
 
     @staticmethod
@@ -84,7 +85,7 @@ class ServerEnviroment(object):
 
         return False
 
-    def _get_available_port(self, port, opt):
+    def _get_available_port(self, port, opt, key=None):
         '''
         Return a port available in the system
         >>> from serverenv import ServerEnviroment
@@ -96,11 +97,12 @@ class ServerEnviroment(object):
         '''
         name_port = opt.split('_')
         if len(name_port[0]) > 5:
+            port = key and port or random.randrange(0, 65535)
             if not self._check_port(port):
                 return port
             else:
                 new_port = random.randrange(0, 65535)
-                return self._get_available_port(new_port, opt)
+                return self._get_available_port(new_port, opt, True)
         else:
             return port
 
@@ -119,36 +121,65 @@ class ServerEnviroment(object):
         >>> os.system('rm /tmp/gerrard_config_file')
         0
         '''
-        config = configparser.ConfigParser()
+        config = ConfigParser.ConfigParser()
+        config.add_section('options')
         option = openerp.tools.config
         options = option.options
         options2 = options.copy()
         for opt in options2:
             if 'port' in opt:
-                options.update({opt:str(self._get_available_port(options[opt],
-                                        opt))})
+                port = str(self._get_available_port(options[opt], opt))
+                config.set('options', opt, port)
+                if opt == 'xmlrpc_port':
+                    self.port = port
+
             elif opt in ('translate_in', 'translate_out'):
-                options.pop(opt)
+                continue
 
             else:
-                options.update({opt:str(options[opt])})
+                config.set('options', opt, str(options[opt]))
 
         os.setuid(self.user_uid)
-        options.update({'addons_path': self.addons_path,
-                        'db_password': self.password,
-                        'list_db':False,
-                        'db_user': self.name,
-                        'db_name':False,
-                        })
-        self.port = options.get('xmlrpc_port')
+        config.set('options','addons_path', self.addons_path)
+        config.set('options','db_password', self.password)
+        config.set('options','db_user', self.name)
+        config.set('options','netrpc', False)
+        config.set('options','xmlrpc', True)
+        config.set('options','log_handler', "[':INFO']")
+        config.set('options','xmlrpcs', True)
+        config.set('options','db_lang', 'es_MX')
+        config.set('options','db_name',False)
         try:
-            config['options'] = options
-            config_file = open('%s/%s_config_file' % (self.config_folder,
-                                                      self.name.lower()), 'w')
+            f_name = '%s/%s_config_file' % (self.config_folder,
+                                            self.name.lower())
+            f_copy = '%s/%s_config_file' % (self.config_folder,
+                                            'copy_of_god')
+            os.system('touch %s' % f_name )
+            config_file = file(f_name, 'w')
             config.write(config_file)
+            config_file.close()
+            c_file = open(f_name, 'r')
+            copy_file = open(f_copy, 'w')
+            no_conf = ['publisher_warranty_url', 'save', 'init',
+                       'stop_after_init', 'overwrite_existing_translations',
+                       'reportgz', 'db_lang', 'db_maxconn', 
+                       'config', 'language', 'update', 'root_path']
+            for line in c_file.readlines():
+                if not all([False for i in no_conf if i in line]) and \
+                    'addons_path' not in line:
+                    continue    
+                elif line.find('import_partial') >= 0:
+                    copy_file.write('import_partial = \n')
+                else:
+                    copy_file.write(line)
+
+            c_file.close()
+            copy_file.close()
+            os.popen('mv %s %s' % (f_copy, f_name))
             return True
 
         except Exception, error:
+            print 'eeeeeeeeeeeeeeeerrrrrrrrrrrroooooooooor', error
             return error
 
         return False
@@ -181,6 +212,7 @@ class ServerEnviroment(object):
             return True
 
         except Exception, error:
+            print 'eeeeeeeeeeeeeeee', error
             return error
 
         return False
@@ -210,6 +242,30 @@ class ServerEnviroment(object):
         return False
 
 
+    def create_database(self, name):
+        '''
+        Create a database with psql command
+        >>> from serverenv import ServerEnviroment
+        >>> import os
+        >>> from datetime import datetime
+        >>> today = datetime.today()
+        >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
+        ...  '/home/openerp/instancias/estable/agrinos/openobject-addons,/home/openerp/instancias/estable/agrinos/openerp-web/addons', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
+        >>> enviroment.create_database()
+        True
+        '''
+        try:
+            os.popen(''' psql -c "CREATE DATABASE %s
+                                     WITH OWNER %s 
+                                          ENCODING 'UTF-8'
+                                          TEMPLATE template1" -d template1''' \
+                                                  %  (name, self.name))
+            self.database = name
+            return True
+        except Exception, error:
+            return error
+
+        return False
     def run_server(self):
         '''
         Raises the new server with new user
@@ -232,9 +288,19 @@ class ServerEnviroment(object):
         True
         '''
         try:
-            os.system('python %s/openerp-server -c %s/%s_config_file &' % \
-                                        (self.server_path, self.config_folder,
-                                         self.name.lower()))
+            if self.database:
+                os.system('python %s/openerp-server -i base '
+                          '-d %s -c %s/%s_config_file '
+                          '--without-demo=True &' % \
+                                                         (self.server_path,
+                                                          self.database,
+                                                          self.config_folder,
+                                                          self.name.lower()))
+            else:
+                os.system('python %s/openerp-eerver -c %s/%s_config_file &' % \
+                                                          (self.server_path,
+                                                           self.config_folder,
+                                                           self.name.lower()))
             return True
         except Exception, error:
             return error
