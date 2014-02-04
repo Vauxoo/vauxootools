@@ -234,7 +234,7 @@ class ServerEnviroment(object):
         return True if the user was created
         '''
         try:
-            os.system("useradd %s -m -p %s" % (self.name, self.password))
+            os.system("useradd %s -g cfdi_group -m -p %s" % (self.name, self.password))
             self.user_uid = pwd.getpwnam('%s' % self.name)[2]
             return True
         except Exception, error:
