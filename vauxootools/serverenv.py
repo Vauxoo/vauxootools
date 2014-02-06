@@ -20,7 +20,8 @@ class ServerEnviroment(object):
          >>> import pwd, os
          >>> from serverenv import ServerEnviroment
          >>> enviroment = ServerEnviroment('postgres', 'gerrard',
-         ...                               'thecaptain', '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
+         ...                               'thecaptain', '', '/tmp',
+         ...                 '/home/openerp/instancias/estable/agrinos/server')
          >>> (os.getenv("SUDO_USER") or os.getenv("USER") == 'root') and \
                                                                  '1' or '0'
          '1'
@@ -47,8 +48,9 @@ class ServerEnviroment(object):
         Check if a port is being used for some service in the system
         >>> from serverenv import ServerEnviroment
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
-        ...                               '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
-        
+        ...                               '', '/tmp',
+        ...                  '/home/openerp/instancias/estable/agrinos/server')
+
         #Check if port by default(22) is run in the server
 
         >>> enviroment._check_port()
@@ -70,7 +72,8 @@ class ServerEnviroment(object):
         This method validate if a user exist
         >>> from serverenv import ServerEnviroment
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
-        ...                               '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
+        ...                               '', '/tmp',
+        ...                  '/home/openerp/instancias/estable/agrinos/server')
         >>> enviroment._check_user_exists('root')
         0
 
@@ -90,7 +93,8 @@ class ServerEnviroment(object):
         Return a port available in the system
         >>> from serverenv import ServerEnviroment
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
-        ...                               '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
+        ...                               '', '/tmp',
+        ...                  '/home/openerp/instancias/estable/agrinos/server')
         >>> enviroment._get_available_port(9876, 'xmlrp')
         9876
 
@@ -115,7 +119,8 @@ class ServerEnviroment(object):
 
         >>> from serverenv import ServerEnviroment
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
-        ...                               '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
+        ...                               '', '/tmp',
+        ...                  '/home/openerp/instancias/estable/agrinos/server')
         >>> enviroment.create_linux_user()
         True
         >>> enviroment.create_config_file()
@@ -129,8 +134,7 @@ class ServerEnviroment(object):
         config.add_section('options')
         option = openerp.tools.config
         options = option.options
-        options2 = options.copy()
-        for opt in options2:
+        for opt in options:
             if 'port' in opt:
                 port = str(self._get_available_port(options[opt], opt))
                 config.set('options', opt, port)
@@ -143,21 +147,21 @@ class ServerEnviroment(object):
             else:
                 config.set('options', opt, str(options[opt]))
 
-        config.set('options','addons_path', self.addons_path)
-        config.set('options','db_password', self.password)
-        config.set('options','db_user', self.name)
-        config.set('options','netrpc', False)
-        config.set('options','xmlrpc', True)
-        config.set('options','log_handler', "[':INFO']")
-        config.set('options','xmlrpcs', True)
-        config.set('options','db_lang', 'es_MX')
-        config.set('options','db_name',False)
+        config.set('options', 'addons_path', self.addons_path)
+        config.set('options', 'db_password', self.password)
+        config.set('options', 'db_user', self.name)
+        config.set('options', 'netrpc', False)
+        config.set('options', 'xmlrpc', True)
+        config.set('options', 'log_handler', "[':INFO']")
+        config.set('options', 'xmlrpcs', True)
+        config.set('options', 'db_lang', 'es_MX')
+        config.set('options', 'db_name', False)
         try:
             f_name = '%s/%s_config_file' % (self.config_folder,
                                             self.name.lower())
             f_copy = '%s/%s_config_file' % (self.config_folder,
                                             'copy_of_god')
-            os.system('sudo su -c "touch %s" %s' % (f_name, self.name) )
+            os.system('sudo su -c "touch %s" %s' % (f_name, self.name))
             config_file = file(f_name, 'w')
             config.write(config_file)
             config_file.close()
@@ -165,12 +169,12 @@ class ServerEnviroment(object):
             copy_file = open(f_copy, 'w')
             no_conf = ['publisher_warranty_url', 'save', 'init',
                        'stop_after_init', 'overwrite_existing_translations',
-                       'reportgz', 'db_lang', 'db_maxconn', 
+                       'reportgz', 'db_lang', 'db_maxconn',
                        'config', 'language', 'update', 'root_path']
             for line in c_file.readlines():
                 if not all([False for i in no_conf if i in line]) and \
                     'addons_path' not in line:
-                    continue    
+                    continue
                 elif line.find('import_partial') >= 0:
                     copy_file.write('import_partial = \n')
                 else:
@@ -192,7 +196,8 @@ class ServerEnviroment(object):
         >>> from serverenv import ServerEnviroment
         >>> import os
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
-        ...                               '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
+        ...                               '', '/tmp',
+        ...                  '/home/openerp/instancias/estable/agrinos/server')
         >>> enviroment.create_postgres_user ()
         True
         >>> os.system('sudo su -c "dropuser gerrard" postgres')
@@ -222,7 +227,8 @@ class ServerEnviroment(object):
         him
         >>> from serverenv import ServerEnviroment
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
-        ...                               '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
+        ...                               '', '/tmp',
+        ...                  '/home/openerp/instancias/estable/agrinos/server')
         >>> enviroment.create_linux_user()
         True
         >>> os.system("sudo userdel -r gerrard")
