@@ -91,7 +91,7 @@ class ServerEnviroment(object):
         >>> from serverenv import ServerEnviroment
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
         ...                               '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
-        >>> enviroment._get_available_port(9876, 'xmlrpc_port')
+        >>> enviroment._get_available_port(9876, 'xmlrp')
         9876
 
         '''
@@ -116,9 +116,13 @@ class ServerEnviroment(object):
         >>> from serverenv import ServerEnviroment
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
         ...                               '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
+        >>> enviroment.create_linux_user()
+        True
         >>> enviroment.create_config_file()
         True
         >>> os.system('rm /tmp/gerrard_config_file')
+        0
+        >>> os.system("sudo userdel -r gerrard")
         0
         '''
         config = ConfigParser.ConfigParser()
@@ -139,7 +143,6 @@ class ServerEnviroment(object):
             else:
                 config.set('options', opt, str(options[opt]))
 
-        os.setuid(self.user_uid)
         config.set('options','addons_path', self.addons_path)
         config.set('options','db_password', self.password)
         config.set('options','db_user', self.name)
@@ -154,7 +157,7 @@ class ServerEnviroment(object):
                                             self.name.lower())
             f_copy = '%s/%s_config_file' % (self.config_folder,
                                             'copy_of_god')
-            os.system('touch %s' % f_name )
+            os.system('sudo su -c "touch %s" %s' % (f_name, self.name) )
             config_file = file(f_name, 'w')
             config.write(config_file)
             config_file.close()
@@ -175,11 +178,11 @@ class ServerEnviroment(object):
 
             c_file.close()
             copy_file.close()
-            os.popen('mv %s %s' % (f_copy, f_name))
+            os.popen('sudo  mv %s %s' % (f_copy, f_name))
+            os.popen('sudo chown %s:%s %s' % (self.name, self.name, f_name))
             return True
 
         except Exception, error:
-            print 'eeeeeeeeeeeeeeeerrrrrrrrrrrroooooooooor', error
             return error
 
         return False
@@ -190,29 +193,23 @@ class ServerEnviroment(object):
         >>> import os
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
         ...                               '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
-        >>> os.popen('python enviroment.py create_postgres_user  postgres gerrard thecaptain') and True
+        >>> enviroment.create_postgres_user ()
         True
+        >>> os.system('sudo su -c "dropuser gerrard" postgres')
+        0
 
         return True if the user was created
         '''
         try:
-            uid = pwd.getpwnam('%s' % self.puser)[2]
-            os.setuid(uid)
             if self.name == 'liverpool':
                 os.popen('dropuser gerrard')
             else:
-                os.popen('''psql -c "CREATE USER %s
-                                     WITH PASSWORD '%s'
-                                     CREATEDB" -U %s -d template1''' % \
-                                                            (self.name,
-                                                             self.password,
-                                                             self.puser))
-
+                os.popen('sudo su -c "createuser -d -R -S %s" %s' % (self.name,
+                                                                   self.puser))
 
             return True
 
         except Exception, error:
-            print 'eeeeeeeeeeeeeeee', error
             return error
 
         return False
@@ -228,14 +225,13 @@ class ServerEnviroment(object):
         ...                               '', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
         >>> enviroment.create_linux_user()
         True
-        >>> os.system("userdel gerrard -r")
+        >>> os.system("sudo userdel -r gerrard")
         0
 
         return True if the user was created
         '''
         try:
-            os.system("useradd %s -m -p %s" % (self.name, self.password))
-            self.user_uid = pwd.getpwnam('%s' % self.name)[2]
+            os.system("sudo useradd %s -m -p %s" % (self.name, self.password))
             return True
         except Exception, error:
             return error
@@ -251,18 +247,27 @@ class ServerEnviroment(object):
         >>> today = datetime.today()
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
         ...  '/home/openerp/instancias/estable/agrinos/openobject-addons,/home/openerp/instancias/estable/agrinos/openerp-web/addons', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
-        >>> enviroment.create_database()
+        >>> enviroment.create_postgres_user()
         True
+        >>> enviroment.create_linux_user()
+        True
+        >>> enviroment.create_database('test_env')
+        True
+        >>> os.system('sudo su -c "dropdb test_env" postgres')
+        0
+        >>> os.system('sudo su -c "dropuser gerrard" postgres')
+        0
+        >>> os.system("sudo userdel gerrard -r")
+        0
         '''
         try:
-            os.popen(''' psql -c "CREATE DATABASE %s
-                                     WITH OWNER %s 
-                                          ENCODING 'UTF-8'
-                                          TEMPLATE template1" -d template1''' \
-                                                  %  (name, self.name))
+            os.popen('sudo su -c "createdb -O %s -E UTF-8 -T template1 %s" %s'\
+                                                    % (self.name, name,
+                                                       self.name))
             self.database = name
             return True
         except Exception, error:
+            print 'eeeeeeeeerrroorrrrr', error
             return error
 
         return False
@@ -274,33 +279,43 @@ class ServerEnviroment(object):
         >>> from datetime import datetime
         >>> today = datetime.today()
         >>> path = os.path.realpath('enviroment.py')
-        >>> os.system('(crontab -l; echo "%s %s %s %s * %s prueba clean") | crontab' % ((today.minute+1), today.hour, today.day, today.month, path)) and True
-        0
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
         ...  '/home/openerp/instancias/estable/agrinos/openobject-addons,/home/openerp/instancias/estable/agrinos/openerp-web/addons', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
+        >>> enviroment.create_postgres_user()
+        True
         >>> enviroment.create_linux_user()
+        True
+        >>> enviroment.create_database('test_env')
         True
         >>> enviroment.create_config_file()
         True
         >>> enviroment.run_server()
         True
-        >>> os.system('python enviroment.py prueba clean') and True
-        True
+        >>> os.system('sudo su -c "dropdb test_env" postgres')
+        0
+        >>> os.system('sudo su -c "dropuser gerrard" postgres')
+        0
+        >>> os.system("sudo ps  -U gerrard| for i in $(awk '{print $1}') ;do kill -9 $i;done")
+        0
+        >>> os.system("sudo userdel gerrard -r")
+        0
         '''
         try:
             if self.database:
-                os.system('python %s/openerp-server -i base '
+                os.system('sudo su -c "python %s/openerp-server -i base '
                           '-d %s -c %s/%s_config_file '
-                          '--without-demo=True &' % \
+                          '--without-demo=True &" %s' % \
                                                          (self.server_path,
                                                           self.database,
                                                           self.config_folder,
-                                                          self.name.lower()))
+                                                          self.name.lower(),
+                                                          self.name))
             else:
-                os.system('python %s/openerp-eerver -c %s/%s_config_file &' % \
-                                                          (self.server_path,
-                                                           self.config_folder,
-                                                           self.name.lower()))
+                os.system('sudo su -c "python %s/openerp-server -c %s/%s_'
+                          'config_file &" %s' % (self.server_path,
+                                              self.config_folder,
+                                              self.name.lower(),
+                                              self.name))
             return True
         except Exception, error:
             return error
@@ -309,15 +324,5 @@ class ServerEnviroment(object):
 
 if __name__ == "__main__":
     ARGS = sys.argv
-    if 'create_postgres_user' in ARGS and len(ARGS) == 5:
-        ENV = ServerEnviroment(ARGS[2], ARGS[3], ARGS[4], '', 'tmp', 'server')
-        ENV.create_postgres_user()
-    elif ARGS and len(ARGS) > 2 and ARGS[2] == 'clean':
-        import subprocess
-        os.system("userdel gerrard -rf")
-        os.popen('python enviroment.py create_postgres_user postgres '
-                 'liverpool thecaptain') and True
-        os.system("killall python")
-    else:
-        import doctest
-        doctest.testmod()
+    import doctest
+    doctest.testmod()

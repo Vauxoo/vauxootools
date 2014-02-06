@@ -169,10 +169,7 @@ class CreateInstance(object):
             enviroment = ServerEnviroment('vauxoo', username,
                                           cfdi_info.get('passwd'),
                                           addonspath, configpath, serverpath)
-            os.popen('python ../vauxootools/serverenv.py create_postgres_user '
-                     '%s %s %s' % (enviroment.puser, enviroment.name,
-                                   enviroment.password))
-
+            enviroment.create_postgres_user()
             enviroment.create_linux_user()
             enviroment.create_config_file()
             enviroment.create_database(db_name)
