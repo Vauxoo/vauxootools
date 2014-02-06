@@ -232,6 +232,7 @@ class ServerEnviroment(object):
         '''
         try:
             os.system("sudo useradd %s -m -p %s" % (self.name, self.password))
+            self.user_uid = pwd.getpwnam('%s' % self.name)[2]
             return True
         except Exception, error:
             return error
