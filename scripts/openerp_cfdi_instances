@@ -39,7 +39,7 @@ class CreateInstance(object):
         <p style="line-height:20px;font-size:15px;margin:6px 0 9px;font-family:&quot;Helvetica Neue&quot;,helvetica,arial,sans-serif">
             <b>Inicia sesion con tu cuenta:</b>
             <br>
-                <a href="%s/?db=%s" target="_blank">https://<span class="il">cfdi</span>.com/login
+                <a href="%s" target="_blank">https://<span class="il">cfdi</span>.com/login
                 </a>
         </p>                                                                       
                                                                                    
@@ -57,7 +57,7 @@ class CreateInstance(object):
         </a>
       </p>
 </div>  
-        """ % (cfdi_info.get('name'), base_url, db_name, cfdi_info.get('email_from'), cfdi_info.get('email_from'))
+        """ % (cfdi_info.get('name'), base_url, cfdi_info.get('email_from'), cfdi_info.get('email_from'))
 
         return body
 
@@ -101,6 +101,7 @@ class CreateInstance(object):
                 partner_id = cfdi_server.user.company_id.partner_id
                 company_id = cfdi_server.user.company_id
                 cfdi_info.pop('user_id')
+                cfdi_info.pop('vat')
                 partner_id and cfdi_server.write('res.partner',
                                                  [partner_id.id], cfdi_info)
                 company_id and \
@@ -109,13 +110,13 @@ class CreateInstance(object):
                                       {
                                           'name':
                                           cfdi_info.get('partner_name'),
-                                          'vat': cfdi_info.get('vat'),
+                                        #  'vat': cfdi_info.get('vat'),
                                       })
 
                 body = self.get_body_html(cfdi_info, cfdi_server, db_name)
                 id = lead_server.create('mail.mail',
                                         {'email_from':'jose@vauxoo.com',
-                                         'email_to':'jose@vauxoo.com',
+                                         'email_to':cfdi_info.get('email_from'),
                                          'subject':'Welcome to OpenCFDI',
                                          'body_html':body})
                 lead_server.execute('mail.mail', 'send', [id])

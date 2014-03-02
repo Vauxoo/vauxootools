@@ -151,6 +151,7 @@ class ServerEnviroment(object):
         config.set('options', 'db_password', self.password)
         config.set('options', 'db_user', self.name)
         config.set('options', 'netrpc', False)
+        config.set('options', 'dbfilter', self.database)
         config.set('options', 'xmlrpc', True)
         config.set('options', 'log_handler', "[':INFO']")
         config.set('options', 'xmlrpcs', True)
