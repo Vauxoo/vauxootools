@@ -42,7 +42,7 @@ class CreateInstance(object):
         <p style="line-height:20px;font-size:15px;margin:6px 0 9px;font-family:&quot;Helvetica Neue&quot;,helvetica,arial,sans-serif">
             <b>Inicia sesion con tu cuenta:</b>
             <br>
-                <a href="%s" target="_blank">https://<span class="il">cfdi</span>.com/login
+                <a href="%s" target="_blank"><span class="il">%s</span>/login
                 </a>
         </p>                                                                       
                                                                                    
@@ -60,7 +60,8 @@ class CreateInstance(object):
         </a>
       </p>
 </div>  
-        """ % (cfdi_info.get('name'), base_url, cfdi_info.get('email_from'), cfdi_info.get('email_from'))
+        """ % (cfdi_info.get('name'), base_url, base_url,
+               cfdi_info.get('email_from'), cfdi_info.get('email_from'))
 
         return body
 
