@@ -19,9 +19,12 @@ class CreateInstance(object):
         @param cfdi_server: Oerplib object with the new instance created
         @param db_name: String with database name
         '''
-        base_url = cfdi_server.execute('ir.config_parameter',
-                                       'get_param', 'web.base.url',
-                                       '')
+        base_url = '%s.%s' % (db_name, cfdi_server)
+        
+        
+        # base_url = cfdi_server.execute('ir.config_parameter',
+       #                                'get_param', 'web.base.url',
+       #                                '')
             #src=https://docs.google.com/uc?id=0B4yfJJJSNrfuYmFjYTMyMzEtYmVhMS00YjA3LTkzNWQtMDIwMzcxZDllMzI5
         body = """
 <div>                                                                              
@@ -62,8 +65,8 @@ class CreateInstance(object):
         return body
 
     def create_server_instance(self, lead_server, cfdi_server, cfdi_info,
-                               host2, db_name, logger):
-        
+                               host2, db_name, logger, domain=None):
+        domain = domain or 'cfdi.pruba.jose.com' 
         module_list = ['l10n_mx_facturae_pac_finkok', 'portal_crm_vauxoo',
                        'web_bootstrap3', 'l10n_mx_cfdi_register',
                        'web_login_page_cfdi', 'auth_crypt', 'opencfdi_basic']
@@ -100,8 +103,8 @@ class CreateInstance(object):
                                       })
                 partner_id = cfdi_server.user.company_id.partner_id
                 company_id = cfdi_server.user.company_id
-                cfdi_info.pop('user_id')
-                cfdi_info.pop('vat')
+                cfdi_info.pop('user_id', 'No')
+    #            cfdi_info.pop('vat', 'No')
                 partner_id and cfdi_server.write('res.partner',
                                                  [partner_id.id], cfdi_info)
                 company_id and \
@@ -113,7 +116,7 @@ class CreateInstance(object):
                                         #  'vat': cfdi_info.get('vat'),
                                       })
 
-                body = self.get_body_html(cfdi_info, cfdi_server, db_name)
+                body = self.get_body_html(cfdi_info, domain, db_name)
                 id = lead_server.create('mail.mail',
                                         {'email_from':'jose@vauxoo.com',
                                          'email_to':cfdi_info.get('email_from'),
@@ -166,14 +169,16 @@ class CreateInstance(object):
             username = email.split('@')
             username = username and username[0]
             db_name = 'cfdi_%s' % \
-                cfdi_info.get('name', '').lower().replace(' ', '')
+                cfdi_info.get('name', '').lower().replace(' ', '').\
+                                                  replace('.', '')
             enviroment = ServerEnviroment('cfdi', username,
-                                          cfdi_info.get('passwd'),
+                                          cfdi_info.get('passwd').strip(),
                                           addonspath, configpath, serverpath)
             enviroment.create_postgres_user()
             enviroment.create_linux_user()
             enviroment.create_config_file()
             enviroment.create_database(db_name)
+            enviroment.create_nginx_config()
             enviroment.run_server()
             time.sleep(60)
             host2 = Instance(dbname=sdb, hostname=shost, port=enviroment.port,
