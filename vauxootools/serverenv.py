@@ -3,7 +3,9 @@ import pwd, os
 import commands
 import sys
 import ConfigParser
+import crypt
 import openerp
+import templates
 import random
 
 class ServerEnviroment(object):
@@ -15,7 +17,7 @@ class ServerEnviroment(object):
     '''
 
     def __init__(self, puser, name, password, addons_path, config_folder,
-                 server_path):
+                 server_path, **kw):
         '''
          >>> import pwd, os
          >>> from serverenv import ServerEnviroment
@@ -40,6 +42,9 @@ class ServerEnviroment(object):
         self.user_uid = 0
         self.port = 8069
         self.database = False
+        self.nport = kw.get('nport', 759)
+        self.sdomain = kw.get('sdomain', 'jose.openerp.la')
+        #self.sdomain = kw.get('sdomain', 'cfdi.pruba.jose.com')
 
 
     @staticmethod
@@ -238,8 +243,9 @@ class ServerEnviroment(object):
         return True if the user was created
         '''
         try:
-            os.system("sudo useradd %s -m -p %s" % (self.name, self.password))
-            self.user_uid = pwd.getpwnam('%s' % self.name)[2]
+            password = self.password
+            encPass = crypt.crypt(password,"22")
+            os.system("sudo useradd %s -m -p %s" % (self.name, encPass))
             return True
         except Exception, error:
             return error
@@ -275,10 +281,65 @@ class ServerEnviroment(object):
             self.database = name
             return True
         except Exception, error:
-            print 'eeeeeeeeerrroorrrrr', error
             return error
 
         return False
+    def create_nginx_config(self):
+        '''
+        Create Nginx config file
+        >>> from serverenv import ServerEnviroment
+        >>> import os
+        >>> from datetime import datetime
+        >>> today = datetime.today()
+        >>> path = os.path.realpath('enviroment.py')
+         >>> enviroment = ServerEnviroment('postgres', 'gerrard',
+         ...                               'thecaptain', '', '/tmp',
+         ...                 '/home/openerp/instancias/estable/agrinos/server')
+        >>> enviroment.create_postgres_user()
+        True
+        >>> enviroment.create_linux_user()
+        True
+        >>> enviroment.create_database('test_env')
+        True
+        >>> enviroment.create_config_file()
+        True
+        >>> enviroment.port = 8069
+        >>> enviroment.create_nginx_config()
+        True
+        >>> os.system('sudo su -c "dropdb test_env" postgres')
+        0
+        >>> os.system('sudo su -c "dropuser gerrard" postgres')
+        0
+        >>> os.system("sudo userdel gerrard -r")
+        0
+        '''
+        try:
+            f = open(os.path.join(self.config_folder, 
+                                  '%s_nginx.conf' % (self.database)), "w")
+            content = templates.render_template('nginx.conf.mako', r=self)
+            f.write(content)
+            f.close()
+            nginx_pid_path = os.path.join(self.config_folder, 'nginx',
+                                          'nginx.pid')                 
+            if os.path.isfile(nginx_pid_path):                                         
+                pid=int(open(nginx_pid_path).read())                                   
+                try:                                                                   
+                    os.kill(pid,1)                                                     
+                    os.popen("sudo nginx -p %s/ -c %s" % \
+                                (os.path.abspath(self.config_folder),
+                                 "%s_nginx.conf" % self.database))
+                except OSError:                                                        
+                    log('ERROR: cannot reload nginx config')                           
+            else:  
+                os.popen("sudo nginx -p %s/ -c %s" % \
+                                (os.path.abspath(self.config_folder),
+                                 "%s_nginx.conf" % self.database))
+            return True
+        except Exception, error:
+            return error
+
+        return False
+
     def run_server(self):
         '''
         Raises the new server with new user
