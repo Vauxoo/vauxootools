@@ -28,11 +28,13 @@ setup(
     url='https://github.com/nhomar/vauxootools',
     packages=[
         'vauxootools',
+        'templates',
     ],
     scripts = [
         'scripts/openerp_verify',
     ],
-    package_dir={'vauxootools': 'vauxootools'},
+    package_dir={'vauxootools': 'vauxootools',
+                 'templates':'templates'},
     include_package_data=True,
     install_requires=requirements,
     license="BSD",
