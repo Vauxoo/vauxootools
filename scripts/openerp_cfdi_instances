@@ -67,8 +67,8 @@ class CreateInstance(object):
 
     def create_server_instance(self, lead_server, cfdi_server, cfdi_info,
                                host2, db_name, logger, domain=None):
-        domain = domain or 'cfdi.pruba.jose.com' 
-        module_list = ['l10n_mx_facturae_pac_finkok', 'portal_crm_vauxoo',
+        domain = domain or 'jose.openerp.la' 
+        module_list = ['l10n_mx_facturae_pac_finkok', 'vauxoo_widgets',
                        'web_bootstrap3', 'l10n_mx_cfdi_register',
                        'web_login_page_cfdi', 'auth_crypt', 'opencfdi_basic']
 
@@ -105,7 +105,7 @@ class CreateInstance(object):
                 partner_id = cfdi_server.user.company_id.partner_id
                 company_id = cfdi_server.user.company_id
                 cfdi_info.pop('user_id', 'No')
-    #            cfdi_info.pop('vat', 'No')
+                cfdi_info.pop('vat', 'No')
                 partner_id and cfdi_server.write('res.partner',
                                                  [partner_id.id], cfdi_info)
                 company_id and \
@@ -120,7 +120,7 @@ class CreateInstance(object):
                 body = self.get_body_html(cfdi_info, domain, db_name)
                 id = lead_server.create('mail.mail',
                                         {'email_from':'jose@vauxoo.com',
-                                         'email_to':cfdi_info.get('email_from'),
+                                         'email_to':'jose@vauxoo.com',
                                          'subject':'Welcome to OpenCFDI',
                                          'body_html':body})
                 lead_server.execute('mail.mail', 'send', [id])

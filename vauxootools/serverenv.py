@@ -325,9 +325,6 @@ class ServerEnviroment(object):
                 pid=int(open(nginx_pid_path).read())                                   
                 try:                                                                   
                     os.kill(pid,1)                                                     
-                    os.popen("sudo nginx -p %s/ -c %s" % \
-                                (os.path.abspath(self.config_folder),
-                                 "%s_nginx.conf" % self.database))
                 except OSError:                                                        
                     log('ERROR: cannot reload nginx config')                           
             else:  
