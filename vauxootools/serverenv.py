@@ -353,7 +353,7 @@ class ServerEnviroment(object):
             if os.path.isfile(nginx_pid_path):                                         
                 try:                                                                   
                     os.system('sudo fuser -k %s/tcp' % self.nport)
-                    time.sleep(10)
+                    time.sleep(3)
                     os.popen("sudo nginx -p %s/ -c %s" % \
                                 (os.path.abspath(self.config_folder),
                                     "cfdi_main_nginx.conf" ))
