@@ -3,6 +3,7 @@ import pwd, os
 import commands
 import sys
 import ConfigParser
+import time
 import crypt
 import openerp
 import templates
@@ -314,23 +315,54 @@ class ServerEnviroment(object):
         0
         '''
         try:
-            f = open(os.path.join(self.config_folder, 
-                                  '%s_nginx.conf' % (self.database)), "w")
-            content = templates.render_template('nginx.conf.mako', r=self)
-            f.write(content)
-            f.close()
+            nginx_conf = os.path.join(self.config_folder,
+                                      'cfdi_main_nginx.conf')
+            if os.path.isfile(nginx_conf):                                         
+                domain = '      server_name %s.%s;\n' % (self.database,
+                                                         self.sdomain) 
+                main_nginx = open(nginx_conf, "rw")
+                lines = main_nginx.readlines()
+                if domain in lines:
+                    return True
+                main_nginx = open(nginx_conf, "rw")
+                tmp = open('/tmp/temp.conf', "w")
+                done = False
+                for i in lines:
+                    if 'server {' in i and not done:
+                        content = templates.\
+                                           render_template('server_nginx.mako',
+                                                           r=self)
+                        tmp.write(content)
+                        tmp.write(i)
+                        done = True
+                    else:
+                        tmp.write(i)
+                main_nginx.close()
+                tmp.close()
+                os.popen('sudo mv /tmp/temp.conf %s' % nginx_conf)
+
+
+            else:
+                f = open(nginx_conf, "w")
+                content = templates.render_template('nginx.conf.mako', r=self)
+                f.write(content)
+                f.close()
+
             nginx_pid_path = os.path.join(self.config_folder, 'nginx',
                                           'nginx.pid')                 
             if os.path.isfile(nginx_pid_path):                                         
-                pid=int(open(nginx_pid_path).read())                                   
                 try:                                                                   
-                    os.kill(pid,1)                                                     
+                    os.system('sudo fuser -k %s/tcp' % self.nport)
+                    time.sleep(10)
+                    os.popen("sudo nginx -p %s/ -c %s" % \
+                                (os.path.abspath(self.config_folder),
+                                    "cfdi_main_nginx.conf" ))
                 except OSError:                                                        
                     log('ERROR: cannot reload nginx config')                           
             else:  
                 os.popen("sudo nginx -p %s/ -c %s" % \
                                 (os.path.abspath(self.config_folder),
-                                 "%s_nginx.conf" % self.database))
+                                    "cfdi_main_nginx.conf" ))
             return True
         except Exception, error:
             return error
