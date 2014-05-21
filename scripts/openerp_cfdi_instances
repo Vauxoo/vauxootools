@@ -118,6 +118,7 @@ class CreateInstance(object):
                                       })
 
                 body = self.get_body_html(cfdi_info, domain, db_name)
+                host2.upgrade_modules(cfdi_server, ['account'])
                 id = lead_server.create('mail.mail',
                                         {'email_from':'jose@vauxoo.com',
                                          'email_to':'jose@vauxoo.com',

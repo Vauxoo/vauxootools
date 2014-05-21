@@ -274,6 +274,45 @@ class Instance(object):
             else:
                 self.logger.warning("The module %s is not avaliable in the "
                                      "server" % module)
+    def upgrade_modules(self, server, modules):
+        '''
+        Install modules sent
+
+
+         >>> from vauxootools import VauxooToolsServers
+         >>> from instance import Instance
+         >>> configuration = VauxooToolsServers(app_name='App Test',
+         ...                  usage_message="Created by VauxooTools",
+         ...                  options=['dbname', 'hostname', 'il', 'password',
+         ...                           'port', 'sd', 'sh', 'spo', 'sp', 'su',
+         ...                           'username'])
+
+         configuration is a vauxootools object with all sent manage parameter
+
+         >>> con = Instance(dbname='localhost', hostname='localhost',
+         ...                port=8070, username='admin',
+         ...                logger=configuration.logger)
+
+         >>> login = con.server_login(host=con.hostname, user='admin',
+         ...                          password='admin',
+         ...                          database='test_db', port=con.port)
+         >>> con.upgrade_modules(login, ['account'])
+
+        @param server: Oerplib object of cfdi instance
+        @param modules: List with modules name that will be install
+
+
+        :raise: :class:`oerplib.error.RPCError`
+        '''
+        for module in modules:
+            ids = server.search('ir.module.module', [('name', '=', module)])
+            if ids:
+                self.logger.info("Updating module %s" % module)
+                server.execute('ir.module.module',
+                               'button_immediate_upgrade', ids)
+            else:
+                self.logger.warning("The module %s is not avaliable in the "
+                                     "server" % module)
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
