@@ -124,6 +124,8 @@ class ServerEnviroment(object):
         This method validate if a user exist
 
         >>> from serverenv import ServerEnviroment
+        >>> os.system('mkdir -m 1777 /tmp/config')
+        0
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
         ...                               '', '/tmp',
         ...                  '/home/openerp/instancias/estable/agrinos/server')
@@ -131,7 +133,7 @@ class ServerEnviroment(object):
         True
         >>> enviroment.create_config_file()
         True
-        >>> os.system('rm /tmp/gerrard_config_file')
+        >>> os.system('rm /tmp/config -r')
         0
         >>> os.system("sudo userdel -r gerrard")
         0
@@ -164,9 +166,9 @@ class ServerEnviroment(object):
         config.set('options', 'db_lang', 'es_MX')
         config.set('options', 'db_name', False)
         try:
-            f_name = '%s/%s_config_file' % (self.config_folder,
+            f_name = '%s/config/%s_config_file' % (self.config_folder,
                                             self.name.lower())
-            f_copy = '%s/%s_config_file' % (self.config_folder,
+            f_copy = '%s/config/%s_config_file' % (self.config_folder,
                                             'copy_of_god')
             os.system('sudo su -c "touch %s" %s' % (f_name, self.name))
             config_file = file(f_name, 'w')
@@ -292,6 +294,10 @@ class ServerEnviroment(object):
         >>> import os
         >>> from datetime import datetime
         >>> today = datetime.today()
+        >>> os.system('mkdir -m 1777 /tmp/config')
+        0
+        >>> os.system('mkdir -m 1777 /tmp/nginx_conf')
+        0
         >>> path = os.path.realpath('enviroment.py')
          >>> enviroment = ServerEnviroment('postgres', 'gerrard',
          ...                               'thecaptain', '', '/tmp',
@@ -304,6 +310,8 @@ class ServerEnviroment(object):
         True
         >>> enviroment.create_config_file()
         True
+        >>> os.system('sudo fuser -k 759/tcp')
+        0
         >>> enviroment.port = 8069
         >>> enviroment.create_nginx_config()
         True
@@ -311,11 +319,18 @@ class ServerEnviroment(object):
         0
         >>> os.system('sudo su -c "dropuser gerrard" postgres')
         0
+        >>> os.system('sudo fuser -k 759/tcp')
+        0
         >>> os.system("sudo userdel gerrard -r")
+        0
+        >>> os.system('rm /tmp/nginx_conf -r')
+        0
+        >>> os.system('rm /tmp/config -r')
         0
         '''
         try:
-            nginx_conf = os.path.join(self.config_folder,
+            nginx_folder = os.path.join(self.config_folder, 'nginx_conf/')
+            nginx_conf = os.path.join(self.config_folder, 'nginx_conf',
                                       'cfdi_main_nginx.conf')
             if os.path.isfile(nginx_conf):                                         
                 domain = '      server_name %s.%s;\n' % (self.database,
@@ -348,20 +363,20 @@ class ServerEnviroment(object):
                 f.write(content)
                 f.close()
 
-            nginx_pid_path = os.path.join(self.config_folder, 'nginx',
+            nginx_pid_path = os.path.join(nginx_folder, 'nginx',
                                           'nginx.pid')                 
             if os.path.isfile(nginx_pid_path):                                         
                 try:                                                                   
                     os.system('sudo fuser -k %s/tcp' % self.nport)
                     time.sleep(3)
-                    os.popen("sudo nginx -p %s/ -c %s" % \
-                                (os.path.abspath(self.config_folder),
+                    os.popen("sudo nginx -p %s -c %s" % \
+                                (nginx_folder,
                                     "cfdi_main_nginx.conf" ))
                 except OSError:                                                        
                     log('ERROR: cannot reload nginx config')                           
             else:  
-                os.popen("sudo nginx -p %s/ -c %s" % \
-                                (os.path.abspath(self.config_folder),
+                os.popen("sudo nginx -p %s -c %s" % \
+                                (nginx_folder,
                                     "cfdi_main_nginx.conf" ))
             return True
         except Exception, error:
@@ -376,9 +391,11 @@ class ServerEnviroment(object):
         >>> import os
         >>> from datetime import datetime
         >>> today = datetime.today()
+        >>> os.system('mkdir -m 1777 /tmp/config')
+        0
         >>> path = os.path.realpath('enviroment.py')
         >>> enviroment = ServerEnviroment('postgres', 'gerrard', 'thecaptain',
-        ...  '/home/openerp/instancias/estable/agrinos/openobject-addons,/home/openerp/instancias/estable/agrinos/openerp-web/addons', '/tmp', '/home/openerp/instancias/estable/agrinos/server')
+        ...  '/home/openerp/instancias/estable/agrinos/openobject-addons,/home/openerp/instancias/estable/agrinos/openerp-web/addons', '/tmp', '/home/openerp/cfdi_server/server/')
         >>> enviroment.create_postgres_user()
         True
         >>> enviroment.create_linux_user()
@@ -397,19 +414,25 @@ class ServerEnviroment(object):
         0
         >>> os.system("sudo userdel gerrard -r")
         0
+        >>> os.system('rm /tmp/config -r')
+        0
         '''
         try:
             if self.database:
                 os.system('sudo su -c "python %s/openerp-server -i base '
-                          '-d %s -c %s/%s_config_file '
-                          '--without-demo=True &" %s' % \
-                                                         (self.server_path,
-                                                          self.database,
-                                                          self.config_folder,
-                                                          self.name.lower(),
-                                                          self.name))
+                          '-d %s -c %s/config/%s_config_file '
+                          '--without-demo=True --logfile=%s/log/%s_log.txt &'
+                          '" %s' % \
+                                 (self.server_path,
+                                  self.database,
+                                  self.config_folder,
+                                  self.name.lower(),
+                                  self.config_folder,
+                                  self.name.lower(),
+                                  self.name,
+                                  ))
             else:
-                os.system('sudo su -c "python %s/openerp-server -c %s/%s_'
+                os.system('sudo su -c "python %s/openerp-server -c %s/config/%s_'
                           'config_file &" %s' % (self.server_path,
                                               self.config_folder,
                                               self.name.lower(),

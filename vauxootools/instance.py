@@ -88,7 +88,7 @@ class Instance(object):
             server=kwargs.get('host'),
             database=kwargs.get('database'),
             port=int(kwargs.get('port')),
-            timeout=999999999999999,
+            timeout=99999999999999999,
         )
         try:
             con.login(kwargs.get('user'), kwargs.get('password'))
