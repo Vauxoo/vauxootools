@@ -67,7 +67,7 @@ class CreateInstance(object):
 
     def create_server_instance(self, lead_server, cfdi_server, cfdi_info,
                                host2, db_name, logger, domain=None):
-        domain = domain or 'jose.openerp.la' 
+        domain = domain or 'test_cfdi.jose.com' 
         module_list = ['l10n_mx_facturae_pac_finkok', 'vauxoo_widgets',
                        'web_bootstrap3', 'l10n_mx_cfdi_register',
                        'web_login_page_cfdi', 'auth_crypt', 'opencfdi_basic']

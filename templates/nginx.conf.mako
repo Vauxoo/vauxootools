@@ -28,14 +28,4 @@ http {
       }
     }
 
-    server {
-       listen ${r.nport} default;
-       server_name ${r.sdomain};
-       root ./static;
-       location / { proxy_pass http://127.0.0.1:${r.nport - 1}; proxy_set_header X-Forwarded-Host ${r.database}.${r.sdomain}; }
-       location /a/ { proxy_pass http://127.0.0.1:${r.nport - 1}; proxy_set_header X-Forwarded-Host ${r.database}.${r.sdomain}; }
-       location = /a { proxy_pass http://127.0.0.1:${r.nport - 1}; proxy_set_header X-Forwarded-Host ${r.database}.${r.sdomain}; }
-       location /hostname/ { proxy_pass http://127.0.0.1:${r.nport - 1}; proxy_set_header X-Forwarded-Host ${r.database}.${r.sdomain}; }
-       location = /hostname { proxy_pass http://127.0.0.1:${r.nport - 1}; proxy_set_header X-Forwarded-Host ${r.database}.${r.sdomain}; }
-    }
 }

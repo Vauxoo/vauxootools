@@ -44,7 +44,7 @@ class ServerEnviroment(object):
         self.port = 8069
         self.database = False
         self.nport = kw.get('nport', 759)
-        self.sdomain = kw.get('sdomain', 'jose.openerp.la')
+        self.sdomain = kw.get('sdomain', 'test_cfdi.jose.com')
         #self.sdomain = kw.get('sdomain', 'cfdi.pruba.jose.com')
 
 
@@ -332,9 +332,9 @@ class ServerEnviroment(object):
             nginx_folder = os.path.join(self.config_folder, 'nginx_conf/')
             nginx_conf = os.path.join(self.config_folder, 'nginx_conf',
                                       'cfdi_main_nginx.conf')
-            if os.path.isfile(nginx_conf):                                         
+            if os.path.isfile(nginx_conf):
                 domain = '      server_name %s.%s;\n' % (self.database,
-                                                         self.sdomain) 
+                                                         self.sdomain)
                 main_nginx = open(nginx_conf, "rw")
                 lines = main_nginx.readlines()
                 if domain in lines:
@@ -364,17 +364,17 @@ class ServerEnviroment(object):
                 f.close()
 
             nginx_pid_path = os.path.join(nginx_folder, 'nginx',
-                                          'nginx.pid')                 
-            if os.path.isfile(nginx_pid_path):                                         
-                try:                                                                   
+                                          'nginx.pid')
+            if os.path.isfile(nginx_pid_path):
+                try:
                     os.system('sudo fuser -k %s/tcp' % self.nport)
                     time.sleep(3)
                     os.popen("sudo nginx -p %s -c %s" % \
                                 (nginx_folder,
                                     "cfdi_main_nginx.conf" ))
-                except OSError:                                                        
-                    log('ERROR: cannot reload nginx config')                           
-            else:  
+                except OSError:
+                    log('ERROR: cannot reload nginx config')
+            else:
                 os.popen("sudo nginx -p %s -c %s" % \
                                 (nginx_folder,
                                     "cfdi_main_nginx.conf" ))
