@@ -5,6 +5,106 @@ from vauxootools.vauxootools import VxConfigServers
 from vauxootools.instance import Instance
 
 
+class ImportAccountsV6(object):
+    '''
+    Import partners from verion 6 of odoo
+    '''
+
+    def __init__(self, migration):
+        '''
+        @param migration: Object with origin and destiny conection
+        '''
+        self.migration = migration
+
+    def create_user_type(self, a_type):
+        '''
+        Create accounts type for each account to create
+        @param a_type: Browse record with account type in the origin instance
+        return id of the acount type found or created
+        '''
+        type_ids = self.migration.dest.search('account.account.type',
+                                              [('code', '=', a_type.code)])
+        if type_ids:
+            return type_ids[0]
+        else:
+            types = {
+                'name': a_type.name,
+                'code': a_type.code,
+                'report_type': a_type.report_type,
+                'close_method': a_type.close_method}
+
+            type_id = self.migration.dest.create('account.account.type',
+                                                 types)
+
+            return type_id
+
+    def get_code(self, code, company):
+        '''
+        Search the code of a specific account in the destiny instance
+        @param code: String with the account code
+        @param company: Integer with the company id
+        return the unic code for the new account
+        '''
+        account_ids = self.migration.dest.search('account.account',
+                                                 [('code', '=', code),
+                                                  ('company_id', '=', company)])
+        if account_ids:
+            new_code = '%s-%s' %(code, 'R')
+            return self.get_code(new_code, company)
+
+        else:
+            return code
+
+    def create_account(self, account_brw, company):
+        '''
+        Create a new account in the destiny instance, all information about
+        the new account is extracted from the origin instance
+        @param account_brw: Browse object of the account in origin instance
+        @param company: Browse object of the company in destiny instance
+        '''
+        account_ids = self.migration.dest.\
+                                search('account.account',
+                                       [('name', '=', account_brw.name),
+                                        ('code', '=', account_brw.code),
+                                        ('company_id', '=', company.id)])
+        if account_ids:
+            return account_ids[0]
+        account = {
+            'name': account_brw.name,
+            'code': self.get_code(account_brw.code, company.id),
+            'parent_id': account_brw.parent_id and \
+                            self.create_account(account_brw.parent_id,
+                                                company) or False,
+            'company_id': company.id,
+            'currency_id': company.currency_id and \
+                                            company.currency_id.id,
+            'user_type': self.create_user_type(account_brw.user_type),
+
+            }
+
+        self.migration.loger.info('Creating acccount %s' % account_brw.name)
+        account_id = self.migration.dest.create('account.account', account)
+        return account_id
+
+    def main(self):
+        '''
+        Search the records to create in the new instance
+        '''
+        company_ids = self.migration.origin.search('res.company', [])
+        company_id = company_ids and company_ids[0]
+        company_dest = self.migration.dest.search('res.company',
+                                                  [])
+        if company_id and company_dest:
+            company_dest = self.migration.dest.browse('res.company',
+                                                      company_dest[0])
+            account_ids = self.migration.origin.\
+                                     search('account.account',
+                                            [('company_id', '=', company_id)])
+            for account in self.migration.origin.browse('account.account',
+                                                        account_ids):
+                self.create_account(account, company_dest)
+
+
 class ImportPartnerV6(object):
     '''
     IMport partners from verion 6 of odoo
@@ -86,8 +186,7 @@ class ImportPartnerV6(object):
     def create_partner(
             self,
             partner_brw,
-            company,
-            ):
+            company):
         '''
         Create partner
         @param partner_brw: Browse object with the partner in origin instance
@@ -220,5 +319,7 @@ if __name__ == '__main__':
 
     CI = MigrationTools()
     CI.main(CONFIGURATION)
+    ACCOUNT = ImportAccountsV6(CI)
+    ACCOUNT.main()
     PARTNER = ImportPartnerV6(CI)
     PARTNER.main()
