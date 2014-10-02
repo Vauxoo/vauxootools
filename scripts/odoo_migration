@@ -5,7 +5,10 @@ from vauxootools.vauxootools import VxConfigServers
 from vauxootools.instance import Instance
 
 
-class import_partnerV6(object):
+class ImportPartnerV6(object):
+    '''
+    IMport partners from verion 6 of odoo
+    '''
 
     def __init__(self, migration):
         '''
@@ -16,14 +19,16 @@ class import_partnerV6(object):
     def get_account(self, account_brw, company):
         '''
         Get the partner account in destiny instance
-        @param acount_brw: Browse object of the account record in origin instance
+        @param acount_brw: Browse object of the account record in origin
+                           instance
         @param company: Browse record of the companuy in destiny instance
         return and id of the account found
         '''
         if account_brw:
-            account_ids = self.migration.dest.search('account.account',[('name', '=', account_brw.name),
-                                                             ('code', '=', account_brw.code),
-                                                             ('company_id', '=', company.id)])
+            account_ids = self.migration.dest.search(
+                'account.account', [('name', '=', account_brw.name),
+                                    ('code', '=', account_brw.code),
+                                    ('company_id', '=', company.id)])
             return account_ids and account_ids[0]
 
         return False
@@ -32,7 +37,8 @@ class import_partnerV6(object):
         '''
         Create contact for each partner address
         @param partner: Browse object with the partner in origin instance
-        @param address: Browse record list with all res.partner.address records of the partner to create
+        @param address: Browse record list with all res.partner.address
+                        records of the partner to create
         @param company: Browse record of the companuy in destiny instance
         '''
         child = []
@@ -49,18 +55,20 @@ class import_partnerV6(object):
                     'city': i.street2,
                     'mobile': i.mobile,
                     'fax': i.fax,
-                    'type':i.type,
-                    })
+                    'type': i.type,
+                })
                 invoice = True
 
             else:
-                child.append((0,0, {
+                child.append((0, 0, {
                     'name': i.name or 'Sin Nombre',
                     'email': i.email,
-                    'property_account_payable': self.get_account(partner.property_account_payable,
-                                                            company),
-                    'property_account_receivable': self.get_account(partner.property_account_receivable,
-                                                               company),
+                    'property_account_payable': \
+                             self.get_account(partner.property_account_payable,
+                                              company),
+                    'property_account_receivable': \
+                         self.get_account(partner.property_account_receivable,
+                                          company),
                     'phone': i.phone,
                     'country_id': company.country_id and company.country_id.id,
                     'street': i.street,
@@ -68,16 +76,18 @@ class import_partnerV6(object):
                     'city': i.street2,
                     'mobile': i.mobile,
                     'fax': i.fax,
-                    'type':i.type,
-                    }))
+                    'type': i.type,
+                }))
 
         partner_dict.update({'child_ids': child})
 
         return partner_dict
 
-
-
-    def create_partner(self, partner_brw, company, is_company=True, parent_id=False):
+    def create_partner(
+            self,
+            partner_brw,
+            company,
+            ):
         '''
         Create partner
         @param partner_brw: Browse object with the partner in origin instance
@@ -85,53 +95,75 @@ class import_partnerV6(object):
         '''
         partner_id = False
         if partner_brw.vat:
-            partner_ids = self.migration.dest.search('res.partner',[
-                                                        ('vat', '=', partner_brw.vat),
-                                                        ])
+            partner_ids = self.migration.dest.search('res.partner', [
+                ('vat', '=', partner_brw.vat),
+            ])
             if partner_ids:
                 return partner_ids[0]
         partner = {
-                'name': partner_brw.name or 'Sin Nombre',
-                'vat': partner_brw.vat,
-                'customer': partner_brw.customer,
-                'is_company': True,
-                'supplier': partner_brw.supplier,
-                'company_id': company.id,
-                'property_account_payable': self.get_account(partner_brw.property_account_payable,
-                                                        company),
-                'property_account_receivable': self.get_account(partner_brw.property_account_receivable,
-                                                           company)
-                }
+            'name': partner_brw.name or 'Sin Nombre',
+            'vat': partner_brw.vat,
+            'customer': partner_brw.customer,
+            'is_company': True,
+            'supplier': partner_brw.supplier,
+            'company_id': company.id,
+            'property_account_payable': self.get_account(
+                partner_brw.property_account_payable,
+                company),
+            'property_account_receivable': self.get_account(
+                partner_brw.property_account_receivable,
+                company)}
 
-        partner.update(self.get_address_and_child(partner_brw, partner_brw.address, company))
-        partner_ids = self.migration.dest.search('res.partner',[('name', '=', partner_brw.name), ('vat', '=', partner.get('vat', False))])
+        partner.update(
+            self.get_address_and_child(
+                partner_brw,
+                partner_brw.address,
+                company))
+        partner_ids = self.migration.dest.search(
+            'res.partner', [
+                ('name', '=', partner_brw.name), ('vat', '=', partner.get(
+                    'vat', False))])
         if partner_ids:
             return partner_ids[0]
 
         self.migration.loger.info('Creating partner %s' % partner_brw.name)
         try:
             partner_id = self.migration.dest.create('res.partner', partner)
-        except Exception, e:
+        except Exception as e:
             self.migration.loger.error('Error %s' % e)
         return partner_id
 
-
     def main(self):
+        '''
+        Search record to create partners
+        '''
         company_dest = self.migration.dest.search('res.company', [])
-        company_dest = self.migration.dest.browse('res.company', company_dest[0])
+        company_dest = self.migration.dest.browse(
+            'res.company',
+            company_dest[0])
         partner_ids = self.migration.origin.search('res.partner', [], limit=50)
         for partner in partner_ids:
             partner = self.migration.origin.browse('res.partner', partner)
             self.create_partner(partner, company_dest)
 
+
 class MigrationTools(object):
+    '''
+    Conections object to get records to migrate
+    '''
 
     def __init__(self):
+        '''
+        Objects of origin and destiny
+        '''
         self.origin = False
         self.dest = False
         self.loger = False
 
     def main(self, configuration):
+        '''
+        Get variables of the configuration object
+        '''
         hostname = configuration.get_hostname()
         dbname = configuration.get_db()
         port = configuration.get_port()
@@ -148,23 +180,29 @@ class MigrationTools(object):
         except:
             test = False
             configuration.logger.error(
-                "We can't connect to the server: http://%s:%s" % (hostname, port))
+                "We can't connect to the server: http://%s:%s" %
+                (hostname, port))
 
         if not test:
-            configuration.logger.error("Please review again the sent parameters")
+            configuration.logger.error(
+                "Please review again the sent parameters")
 
         origin = Instance(dbname=dbname, hostname=hostname, port=int(port),
-                         passwd=pwd, username=user,
-                         logger=configuration.logger)
+                          passwd=pwd, username=user,
+                          logger=configuration.logger)
         self.origin = origin.server_login()
         dest = Instance(dbname=sdb, hostname=shost, port=int(sport),
-                         passwd=spwd, username=suser,
-                         logger=configuration.logger)
+                        passwd=spwd, username=suser,
+                        logger=configuration.logger)
         self.dest = dest.server_login()
         self.loger = configuration.logger
         return True
 
+
 def test_server(host, port):
+    '''
+    Test the conection with the servers
+    '''
     oerp = oerplib.OERP(host, port=port)
     # TODO: Log correctly the failure, now the algorithm to parse the logfile
     # need to be done separately due to the fail moment
@@ -172,7 +210,7 @@ def test_server(host, port):
 
 if __name__ == '__main__':
 
-    configuration = VauxooToolsServers(app_name='migrate_instances',
+    CONFIGURATION = VauxooToolsServers(app_name='migrate_instances',
                                        usage_message="Created by VauxooTools",
                                        options=['dbname', 'hostname',
                                                 'password', 'port', 'sd',
@@ -181,7 +219,6 @@ if __name__ == '__main__':
                                        log=True, vx_instance=VxConfigServers)
 
     CI = MigrationTools()
-    CI.main(configuration)
-    partner = import_partnerV6(CI)
-    partner.main()
-
+    CI.main(CONFIGURATION)
+    PARTNER = ImportPartnerV6(CI)
+    PARTNER.main()
