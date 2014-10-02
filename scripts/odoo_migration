@@ -1,13 +1,171 @@
 #! /usr/bin/env python
-import oerplib
 from vauxootools.vauxootools import VauxooToolsServers
 from vauxootools.vauxootools import VxConfigServers
 from vauxootools.instance import Instance
 
 
+class ImportJournalsV6(object):
+    '''
+    Import journals from verion 6 of odoo
+    '''
+
+    def __init__(self, migration):
+        '''
+        @param migration: Object with origin and destiny conection
+        '''
+        self.migration = migration
+
+    def create_sequence(self, a_type, company):
+        '''
+        Create the sequence in the destiny instance for the new journal
+        @param a_type: Browse object of the sequence records in origin instance
+        @param company: Integer with the id of main company for this record
+        return the id of the new sequence
+        '''
+        if a_type:
+            types = {
+                'name': a_type.name,
+                'company_id': company,
+                'prefix': a_type.prefix,
+                'suffix': a_type.suffix,
+                'padding': a_type.padding,
+                'number_increment': a_type.number_increment,
+            }
+
+            type_id = self.migration.dest.create('ir.sequence', types)
+            return type_id
+
+        return False
+
+    def get_code(self, code, company):
+        '''
+        Send a new code for the journal because the journal code is unic
+        @param code: String with the code of the new journal
+        @param company: Integer with the company id in destiny instance
+        return a string with unic code for the new journal
+        '''
+        account_ids = self.migration.dest.\
+                                search('account.journal',
+                                       [('code', '=', code),
+                                        ('company_id', '=', company)])
+        if account_ids:
+            new_code = '%s-%s' %(code, 'R')
+            return self.get_code(new_code, company)
+
+        else:
+            return code
+
+
+    def get_account(self, account_brw, company):
+        '''
+        Search the corresponding account for the new journal in the destiny
+        instance
+        @param account_brw: Browse Object with the account record in the origin
+                            instance
+        @param company: Integer with the company id in the destiny instance
+        return the id of the corresponding account in the destiny instance
+        '''
+        if account_brw:
+            account_ids = self.migration.dest.\
+                                 search('account.account',
+                                        [('name', '=', account_brw.name),
+                                         ('code', '=', account_brw.code),
+                                         ('company_id', '=', company.id)])
+            return account_ids and account_ids[0]
+
+        return False
+
+    def create_analytic(self, journal_brw, company):
+        '''
+        Create an analytic account for the new journal
+        @param journal_brw: Browse object with the journal record
+        @param company: Browse object with the main company record
+        '''
+        journal_ids = self.migration.dest.\
+                             search('account.analytic.journal',
+                                    [('name', '=', journal_brw.name),
+                                     ('type', '=', journal_brw.type),
+                                     ('code', '=', journal_brw.code),
+                                     ('company_id', '=', company.id)])
+        if journal_ids:
+            return journal_ids[0]
+        journal = {
+            'name': journal_brw.name,
+            'type': journal_brw.type,
+            'code': journal_brw.code,
+            'company_id': company.id,
+            }
+
+        self.migration.loger.info('Creating journal %s' % journal_brw.name)
+        journal_id = self.migration.dest.create('account.analytic.journal',
+                                                journal)
+        return journal_id
+
+    def create_journal(self, journal_brw, company):
+        '''
+        Create the new journal in the destiny instance
+        @param journal_brw: Browse object with the journal record in the origin
+                            instance
+        @param company: Browse record with the company record in the destiny
+                        instance
+        '''
+        journal_ids = self.migration.dest.\
+                            search('account.journal',
+                                   [('name', '=', journal_brw.name),
+                                    ('code', '=', journal_brw.code),
+                                    ('company_id', '=', company.id)])
+        journal_id = False
+        if journal_ids:
+            return journal_ids[0]
+        journal = {
+            'name': journal_brw.name,
+            'type': journal_brw.type,
+            'code': self.get_code(journal_brw.code, company.id),
+            'analytic_journal_id': \
+                    journal_brw.analytic_journal_id and \
+                        self.create_analytic(journal_brw.analytic_journal_id,
+                                             company) or  False,
+            'company_id': company.id,
+            'currency_id': company.currency_id and company.currency_id.id,
+            'sequence_id': self.create_sequence(journal_brw.sequence_id,
+                                                company.id),
+            'default_debit_account_id': \
+                    self.get_account(journal_brw.default_debit_account_id,
+                                     company),
+            'default_credit_account_id': \
+                    self.get_account(journal_brw.default_credit_account_id,
+                                     company),
+            }
+
+        self.migration.loger.info('Creating journal %s' % journal_brw.name)
+        try:
+            journal_id = self.migration.dest.create('account.journal', journal)
+        except Exception, problem:
+            self.migration.loger.error('Error %s' % problem)
+        return journal_id
+
+    def main(self):
+        '''
+        Prepare the ids of the new records to create
+        '''
+
+        company_ids = self.migration.origin.search('res.company', [])
+        company_id = company_ids and company_ids[0]
+        company_dest = self.migration.dest.search('res.company', [])
+        if company_id and company_dest:
+            company_dest = self.migration.dest.browse('res.company',
+                                                      company_dest[0])
+            journal_ids = self.migration.origin.\
+                                   search('account.journal',
+                                          [('company_id', '=', company_id)])
+            for journal in self.migration.origin.browse('account.journal',
+                                                        journal_ids):
+                self.create_journal(journal, company_dest)
+
+
 class ImportAccountsV6(object):
     '''
-    Import partners from verion 6 of odoo
+    Import accounts from verion 6 of odoo
     '''
 
     def __init__(self, migration):
@@ -228,8 +386,8 @@ class ImportPartnerV6(object):
         self.migration.loger.info('Creating partner %s' % partner_brw.name)
         try:
             partner_id = self.migration.dest.create('res.partner', partner)
-        except Exception as e:
-            self.migration.loger.error('Error %s' % e)
+        except Exception as problem:
+            self.migration.loger.error('Error %s' % problem)
         return partner_id
 
     def main(self):
@@ -273,19 +431,6 @@ class MigrationTools(object):
         sport = configuration.get_sport()
         suser = configuration.get_suser()
         spwd = configuration.get_spwd()
-        test = True
-        try:
-            test = test_server(hostname, port)
-        except:
-            test = False
-            configuration.logger.error(
-                "We can't connect to the server: http://%s:%s" %
-                (hostname, port))
-
-        if not test:
-            configuration.logger.error(
-                "Please review again the sent parameters")
-
         origin = Instance(dbname=dbname, hostname=hostname, port=int(port),
                           passwd=pwd, username=user,
                           logger=configuration.logger)
@@ -298,14 +443,6 @@ class MigrationTools(object):
         return True
 
 
-def test_server(host, port):
-    '''
-    Test the conection with the servers
-    '''
-    oerp = oerplib.OERP(host, port=port)
-    # TODO: Log correctly the failure, now the algorithm to parse the logfile
-    # need to be done separately due to the fail moment
-    return oerp
 
 if __name__ == '__main__':
 
@@ -319,7 +456,7 @@ if __name__ == '__main__':
 
     CI = MigrationTools()
     CI.main(CONFIGURATION)
-    ACCOUNT = ImportAccountsV6(CI)
+    ACCOUNT = ImportJournalsV6(CI)
     ACCOUNT.main()
     PARTNER = ImportPartnerV6(CI)
     PARTNER.main()
