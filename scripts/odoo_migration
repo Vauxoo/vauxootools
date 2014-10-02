@@ -174,75 +174,34 @@ class ImportAccountsV6(object):
         '''
         self.migration = migration
 
-    def create_user_type(self, a_type):
+    def import_account_type(self):
         '''
-        Create accounts type for each account to create
-        @param a_type: Browse record with account type in the origin instance
-        return id of the acount type found or created
+        Import the account type by import_data method way
         '''
-        type_ids = self.migration.dest.search('account.account.type',
-                                              [('code', '=', a_type.code)])
-        if type_ids:
-            return type_ids[0]
-        else:
-            types = {
-                'name': a_type.name,
-                'code': a_type.code,
-                'report_type': a_type.report_type,
-                'close_method': a_type.close_method}
-
-            type_id = self.migration.dest.create('account.account.type',
-                                                 types)
-
-            return type_id
-
-    def get_code(self, code, company):
-        '''
-        Search the code of a specific account in the destiny instance
-        @param code: String with the account code
-        @param company: Integer with the company id
-        return the unic code for the new account
-        '''
-        account_ids = self.migration.dest.search('account.account',
-                                                 [('code', '=', code),
-                                                  ('company_id', '=', company)])
-        if account_ids:
-            new_code = '%s-%s' %(code, 'R')
-            return self.get_code(new_code, company)
-
-        else:
-            return code
-
-    def create_account(self, account_brw, company):
-        '''
-        Create a new account in the destiny instance, all information about
-        the new account is extracted from the origin instance
-        @param account_brw: Browse object of the account in origin instance
-        @param company: Browse object of the company in destiny instance
-        '''
-        account_ids = self.migration.dest.\
-                                search('account.account',
-                                       [('name', '=', account_brw.name),
-                                        ('code', '=', account_brw.code),
-                                        ('company_id', '=', company.id)])
-        if account_ids:
-            return account_ids[0]
-        account = {
-            'name': account_brw.name,
-            'code': self.get_code(account_brw.code, company.id),
-            'parent_id': account_brw.parent_id and \
-                            self.create_account(account_brw.parent_id,
-                                                company) or False,
-            'company_id': company.id,
-            'currency_id': company.currency_id and \
-                                            company.currency_id.id,
-            'user_type': self.create_user_type(account_brw.user_type),
-
-            }
-
-        self.migration.loger.info('Creating acccount %s' % account_brw.name)
-        account_id = self.migration.dest.create('account.account', account)
-        return account_id
+        account_ids = self.migration.origin.\
+                                    search('account.account.type',
+                                           [])
+        for account in self.migration.origin.execute('account.account.type',
+                                                     'export_data',
+                                                     account_ids,
+                                                     ['id', 'name',
+                                                      'code', 'report_type',
+                                                      'close_method']
+                                                    )['datas']:
+            result = self.migration.dest.execute('account.account.type',
+                                                 'import_data',
+                                                 ['id', 'name',
+                                                  'code', 'report_type',
+                                                  'close_method'],
+                                                 [account])
+            if result[2]:
+                self.migration.loger.error('Error creating the type %s '
+                                           'because %s' % (account[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the account type %s '
+                                          '' % (account[1]))
+        return True
 
     def main(self):
         '''
@@ -253,14 +212,37 @@ class ImportAccountsV6(object):
         company_dest = self.migration.dest.search('res.company',
                                                   [])
         if company_id and company_dest:
+            self.import_account_type()
             company_dest = self.migration.dest.browse('res.company',
                                                       company_dest[0])
             account_ids = self.migration.origin.\
                                      search('account.account',
-                                            [('company_id', '=', company_id)])
-            for account in self.migration.origin.browse('account.account',
-                                                        account_ids):
-                self.create_account(account, company_dest)
+                                            [])
+            for account in self.migration.origin.execute('account.account',
+                                                         'export_data',
+                                                         account_ids,
+                                                         ['id', 'name',
+                                                          'code',
+                                                          'currency_id',
+                                                          'parent_id/id',
+                                                          'user_type/id']
+                                                        )['datas']:
+
+                result = self.migration.dest.execute('account.account',
+                                                     'import_data',
+                                                     ['id', 'name',
+                                                      'code', 'currency_id',
+                                                      'parent_id/id',
+                                                      'user_type/id'],
+                                                     [account])
+                if result[2]:
+                    self.migration.loger.error('Error creating the account %s '
+                                               'because %s' % (account[1],
+                                                               result[2]))
+                else:
+                    self.migration.loger.info('Created the account %s '
+                                              '' % (account[1]))
+
 
 
 class ImportPartnerV6(object):
@@ -456,7 +438,5 @@ if __name__ == '__main__':
 
     CI = MigrationTools()
     CI.main(CONFIGURATION)
-    ACCOUNT = ImportJournalsV6(CI)
+    ACCOUNT = ImportAccountsV6(CI)
     ACCOUNT.main()
-    PARTNER = ImportPartnerV6(CI)
-    PARTNER.main()
