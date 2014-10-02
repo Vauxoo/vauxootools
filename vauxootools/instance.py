@@ -45,7 +45,6 @@ class Instance(object):
         self.dbname = kwargs.get('dbname')
         self.hostname = kwargs.get('hostname')
         self.password = kwargs.get('passwd', 'admin')
-        self.sadminpwd = kwargs.get('sadminpwd', 'admin')
         self.port = kwargs.get('port')
         self.username = kwargs.get('username')
         self.logger = kwargs.get('logger')
@@ -85,20 +84,19 @@ class Instance(object):
         '''
 
         con = oerplib.OERP(
-            server=kwargs.get('host'),
-            database=kwargs.get('database'),
-            port=int(kwargs.get('port')),
-            timeout=99999999999999999,
+            server=kwargs.get('host', False) or self.hostname,
+            database=kwargs.get('database', False) or self.dbname,
+            port=kwargs.get('port', False) or self.port,
         )
         try:
-            con.login(kwargs.get('user'), kwargs.get('password'))
-            self.logger.info("Logged with user %s" % (kwargs.get('user')))
+            con.login(kwargs.get('user') or self.username, kwargs.get('password') or self.password)
+            self.logger.info("Logged with user %s" % (kwargs.get('user') or self.username))
         except Exception, error:
             con = False
             self.logger.error("We can't do login in the iserver: "
                               "http://%s:%s with user %s" % \
-                                      (kwargs.get('host'), kwargs.get('port'),
-                                      kwargs.get('user')))
+                                      (kwargs.get('host') or self.hostname, kwargs.get('port') or self.port,
+                                      kwargs.get('user') or self.username))
             self.logger.error(error)
         return con
 
