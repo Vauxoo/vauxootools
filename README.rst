@@ -6,7 +6,7 @@ Vauxoo Tools
         :target: https://travis-ci.org/vauxoo/vauxootools
 
 
-Tools to work with python and OpenERP.
+Tools to work with python and Odoo.
 
 
 * Free software: BSD license
