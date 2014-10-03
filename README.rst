@@ -5,7 +5,7 @@ Vauxoo Tools
 .. image:: https://badge.fury.io/py/vauxootools.png
     :target: http://badge.fury.io/py/vauxootools
     
-.. image:: https://travis-ci.org/vauxoo/vauxootools.png?branch=master
+.. image:: https://travis-ci.org/Vauxoo/vauxootools.svg?branch=master
         :target: https://travis-ci.org/vauxoo/vauxootools
 
 .. image:: https://pypip.in/d/vauxootools/badge.png
