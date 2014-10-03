@@ -87,7 +87,7 @@ class Instance(object):
             server=kwargs.get('host', False) or self.hostname,
             database=kwargs.get('database', False) or self.dbname,
             port=kwargs.get('port', False) or self.port,
-        )
+            timeout=9999999)
         try:
             con.login(kwargs.get('user') or self.username, kwargs.get('password') or self.password)
             self.logger.info("Logged with user %s" % (kwargs.get('user') or self.username))
