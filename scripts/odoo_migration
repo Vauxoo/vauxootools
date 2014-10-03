@@ -15,157 +15,347 @@ class ImportJournalsV6(object):
         '''
         self.migration = migration
 
-    def create_sequence(self, a_type, company):
+    def create_sequence(self):
         '''
         Create the sequence in the destiny instance for the new journal
-        @param a_type: Browse object of the sequence records in origin instance
-        @param company: Integer with the id of main company for this record
-        return the id of the new sequence
         '''
-        if a_type:
-            types = {
-                'name': a_type.name,
-                'company_id': company,
-                'prefix': a_type.prefix,
-                'suffix': a_type.suffix,
-                'padding': a_type.padding,
-                'number_increment': a_type.number_increment,
-            }
+        sequence_ids = self.migration.origin.\
+                                    search('ir.sequence',
+                                           [])
+        for sequence in self.migration.origin.execute('ir.sequence',
+                                                      'export_data',
+                                                      sequence_ids,
+                                                      ['id', 'name',
+                                                       'prefix',
+                                                       'suffix',
+                                                       'padding',
+                                                       'number_increment'
+                                                      ])['datas']:
+            result = self.migration.dest.execute('ir.sequence',
+                                                 'import_data',
+                                                 ['id', 'name',
+                                                  'prefix',
+                                                  'suffix',
+                                                  'padding',
+                                                  'number_increment'],
+                                                 [sequence])
+            if result[2]:
+                self.migration.loger.error('Error creating the sequence %s '
+                                           'because %s' % (sequence[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the sequence type %s '
+                                          '' % (sequence[1]))
+        return True
 
-            type_id = self.migration.dest.create('ir.sequence', types)
-            return type_id
 
-        return False
-
-    def get_code(self, code, company):
+    def create_analytic(self):
         '''
-        Send a new code for the journal because the journal code is unic
-        @param code: String with the code of the new journal
-        @param company: Integer with the company id in destiny instance
-        return a string with unic code for the new journal
+        Import the Analytic Journal by import_data method way
         '''
-        account_ids = self.migration.dest.\
-                                search('account.journal',
-                                       [('code', '=', code),
-                                        ('company_id', '=', company)])
-        if account_ids:
-            new_code = '%s-%s' %(code, 'R')
-            return self.get_code(new_code, company)
+        analytic_ids = self.migration.origin.\
+                                    search('account.analytic.journal',
+                                           [])
+        for analytic in self.migration.origin.\
+                                execute('account.analytic.journal',
+                                        'export_data',
+                                        analytic_ids,
+                                        ['id', 'name',
+                                         'code',
+                                         'type'])['datas']:
+            result = self.migration.dest.execute('account.analytic.journal',
+                                                 'import_data',
+                                                 ['id', 'name',
+                                                  'code',
+                                                  'type'],
+                                                 [analytic])
+            if result[2]:
+                self.migration.loger.error('Error creating the analytic %s '
+                                           'because %s' % (analytic[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the analytic type %s '
+                                          '' % (analytic[1]))
+        return True
 
-        else:
-            return code
 
-
-    def get_account(self, account_brw, company):
-        '''
-        Search the corresponding account for the new journal in the destiny
-        instance
-        @param account_brw: Browse Object with the account record in the origin
-                            instance
-        @param company: Integer with the company id in the destiny instance
-        return the id of the corresponding account in the destiny instance
-        '''
-        if account_brw:
-            account_ids = self.migration.dest.\
-                                 search('account.account',
-                                        [('name', '=', account_brw.name),
-                                         ('code', '=', account_brw.code),
-                                         ('company_id', '=', company.id)])
-            return account_ids and account_ids[0]
-
-        return False
-
-    def create_analytic(self, journal_brw, company):
-        '''
-        Create an analytic account for the new journal
-        @param journal_brw: Browse object with the journal record
-        @param company: Browse object with the main company record
-        '''
-        journal_ids = self.migration.dest.\
-                             search('account.analytic.journal',
-                                    [('name', '=', journal_brw.name),
-                                     ('type', '=', journal_brw.type),
-                                     ('code', '=', journal_brw.code),
-                                     ('company_id', '=', company.id)])
-        if journal_ids:
-            return journal_ids[0]
-        journal = {
-            'name': journal_brw.name,
-            'type': journal_brw.type,
-            'code': journal_brw.code,
-            'company_id': company.id,
-            }
-
-        self.migration.loger.info('Creating journal %s' % journal_brw.name)
-        journal_id = self.migration.dest.create('account.analytic.journal',
-                                                journal)
-        return journal_id
-
-    def create_journal(self, journal_brw, company):
+    def create_journal(self):
         '''
         Create the new journal in the destiny instance
-        @param journal_brw: Browse object with the journal record in the origin
-                            instance
-        @param company: Browse record with the company record in the destiny
-                        instance
         '''
-        journal_ids = self.migration.dest.\
-                            search('account.journal',
-                                   [('name', '=', journal_brw.name),
-                                    ('code', '=', journal_brw.code),
-                                    ('company_id', '=', company.id)])
-        journal_id = False
-        if journal_ids:
-            return journal_ids[0]
-        journal = {
-            'name': journal_brw.name,
-            'type': journal_brw.type,
-            'code': self.get_code(journal_brw.code, company.id),
-            'analytic_journal_id': \
-                    journal_brw.analytic_journal_id and \
-                        self.create_analytic(journal_brw.analytic_journal_id,
-                                             company) or  False,
-            'company_id': company.id,
-            'currency_id': company.currency_id and company.currency_id.id,
-            'sequence_id': self.create_sequence(journal_brw.sequence_id,
-                                                company.id),
-            'default_debit_account_id': \
-                    self.get_account(journal_brw.default_debit_account_id,
-                                     company),
-            'default_credit_account_id': \
-                    self.get_account(journal_brw.default_credit_account_id,
-                                     company),
-            }
-
-        self.migration.loger.info('Creating journal %s' % journal_brw.name)
-        try:
-            journal_id = self.migration.dest.create('account.journal', journal)
-        except Exception, problem:
-            self.migration.loger.error('Error %s' % problem)
-        return journal_id
+        journal_ids = self.migration.origin.\
+                                    search('account.journal',
+                                           [])
+        for journal in self.migration.origin.\
+                                execute('account.journal',
+                                        'export_data',
+                                        journal_ids,
+                                        ['id', 'name',
+                                         'code',
+                                         'type',
+                                         'analytic_journal_id/id',
+                                         'sequence_id',
+                                         'default_credit_account_id/id',
+                                         'default_debit_account_id/id',
+                                        ])['datas']:
+            if 'Bank and Cheques' in journal:
+                journal.insert(journal.index('Bank and Cheques'),
+                               'Bank and Checks')
+                journal.remove('Bank and Cheques')
+            result = self.migration.dest.\
+                            execute('account.journal',
+                                    'import_data',
+                                    ['id', 'name',
+                                     'code',
+                                     'type',
+                                     'analytic_journal_id/id',
+                                     'sequence_id',
+                                     'default_credit_account_id/id',
+                                     'default_debit_account_id/id'],
+                                    [journal])
+            if result[2]:
+                self.migration.loger.error('Error creating the journal %s '
+                                           'because %s' % (journal[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the journal type %s '
+                                          '' % (journal[1]))
+        return True
 
     def main(self):
         '''
         Prepare the ids of the new records to create
         '''
+        self.create_sequence()
+        self.create_analytic()
+        self.create_journal()
 
-        company_ids = self.migration.origin.search('res.company', [])
-        company_id = company_ids and company_ids[0]
-        company_dest = self.migration.dest.search('res.company', [])
-        if company_id and company_dest:
-            company_dest = self.migration.dest.browse('res.company',
-                                                      company_dest[0])
-            journal_ids = self.migration.origin.\
-                                   search('account.journal',
-                                          [('company_id', '=', company_id)])
-            for journal in self.migration.origin.browse('account.journal',
-                                                        journal_ids):
-                self.create_journal(journal, company_dest)
 
+
+
+class ImportProductV6(object):
+    '''
+    Import Product from verion 6 of odoo
+    '''
+
+    def __init__(self, migration):
+        '''
+        @param migration: Object with origin and destiny conection
+        '''
+        self.migration = migration
+
+    def import_category(self):
+        '''
+        Import the Product Category by import_data method way
+        '''
+        category_ids = self.migration.origin.\
+                                    search('product.category',
+                                           [])
+        for category in self.migration.origin.\
+                              execute('product.category',
+                                      'export_data',
+                                      category_ids,
+                                      ['id', 'name',
+                                       'type',
+                                       'parent_id/id',
+                                       'property_account_expense_categ/id',
+                                       'property_account_income_categ/id',
+                                       'property_stock_account_input_categ/id',
+                                       'property_stock_account_output_categ/id',
+                                       'property_stock_valuation_account_id/id',
+                                       'property_stock_journal/id',
+                                      ])['datas']:
+            result = self.migration.dest.\
+                            execute('product.category',
+                                    'import_data',
+                                    ['id', 'name',
+                                     'type',
+                                     'parent_id/id',
+                                     'property_account_expense_categ/id',
+                                     'property_account_income_categ/id',
+                                     'property_stock_account_input_categ/id',
+                                     'property_stock_account_output_categ/id',
+                                     'property_stock_valuation_account_id/id',
+                                     'property_stock_journal/id'],
+                                             [category])
+            if result[2]:
+                self.migration.loger.error('Error creating the Category %s '
+                                           'because %s' % (category[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the category type %s '
+                                          '' % (category[1]))
+        return True
+
+    def import_product(self):
+        '''
+        Import the Product by import_data method way
+        '''
+        product_ids = self.migration.origin.\
+                                    search('product.product',
+                                           [])
+        for product in self.migration.origin.\
+                              execute('product.product',
+                                      'export_data',
+                                      product_ids,
+                                      ['id', 'name',
+                                       'type',
+                                       'default_code',
+                                       'list_price',
+                                       'standard_price',
+                                       'active',
+                                       'warranty',
+                                       'description_sale',
+                                       'categ_id/id'])['datas']:
+            result = self.migration.dest.\
+                            execute('product.product',
+                                    'import_data',
+                                    ['id', 'name',
+                                     'type',
+                                     'default_code',
+                                     'list_price',
+                                     'standard_price',
+                                     'active',
+                                     'warranty',
+                                     'description_sale',
+                                     'categ_id/id'],
+                                             [product])
+            if result[2]:
+                self.migration.loger.error('Error creating the product %s '
+                                           'because %s' % (product[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the product type %s '
+                                          '' % (product[1]))
+        return True
+
+    def main(self):
+        self.import_category()
+        self.import_product()
+
+class ImportListPriceV6(object):
+    '''
+    Import List Price from verion 6 of odoo
+    '''
+
+    def __init__(self, migration):
+        '''
+        @param migration: Object with origin and destiny conection
+        '''
+        self.migration = migration
+
+    def import_price_list(self):
+        '''
+        Import the price_list by import_data method way
+        '''
+        pricelist_ids = self.migration.origin.\
+                                    search('product.pricelist',
+                                           [])
+        for pricelist in self.migration.origin.execute('product.pricelist',
+                                                       'export_data',
+                                                       pricelist_ids,
+                                                       ['id', 'name',
+                                                        'type'])['datas']:
+            result = self.migration.dest.execute('product.pricelist',
+                                                 'import_data',
+                                                 ['id', 'name',
+                                                  'type'],
+                                                 [pricelist])
+            if result[2]:
+                self.migration.loger.error('Error creating the type %s '
+                                           'because %s' % (pricelist[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the pricelist type %s '
+                                          '' % (pricelist[1]))
+        return True
+
+    def import_price_list_version(self):
+        '''
+        Import the price_list_version by import_data method way
+        '''
+        pricelist_ids = self.migration.origin.\
+                                    search('product.pricelist.version',
+                                           [])
+        for pricelist in self.migration.origin.\
+                                 execute('product.pricelist.version',
+                                         'export_data',
+                                         pricelist_ids,
+                                         ['id', 'name',
+                                          'pricelist_id/id',
+                                          'date_start',
+                                          'date_end'])['datas']:
+            result = self.migration.dest.execute('product.pricelist.version',
+                                                 'import_data',
+                                                 ['id', 'name',
+                                                  'pricelist_id/id',
+                                                  'date_start',
+                                                  'date_end'],
+                                                 [pricelist])
+            if result[2]:
+                self.migration.loger.error('Error creating the type %s '
+                                           'because %s' % (pricelist[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the pricelist type %s '
+                                          '' % (pricelist[1]))
+        return True
+
+    def import_price_list_items(self):
+        '''
+        Import the price_list_items by import_data method way
+        '''
+        pricelist_ids = self.migration.origin.\
+                                    search('product.pricelist.item',
+                                           [])
+        for pricelist in self.migration.origin.\
+                                execute('product.pricelist.item',
+                                        'export_data',
+                                        pricelist_ids,
+                                        ['id', 'name',
+                                         'price_version_id/id',
+                                         'base_pricelist_id/id',
+                                         'min_quantity',
+                                         'base',
+                                         'price_discount',
+                                         'price_max_margin',
+                                         'price_min_margin',
+                                         'price_round',
+                                         'sequence',
+                                        ])['datas']:
+            result = self.migration.dest.execute('product.pricelist.item',
+                                                 'import_data',
+                                                 ['id', 'name',
+                                                  'price_version_id/id',
+                                                  'base_pricelist_id/id',
+                                                  'min_quantity',
+                                                  'base',
+                                                  'price_discount',
+                                                  'price_max_margin',
+                                                  'price_min_margin',
+                                                  'price_round',
+                                                  'sequence'],
+                                                 [pricelist])
+            if result[2]:
+                self.migration.loger.error('Error creating the type %s '
+                                           'because %s' % (pricelist[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the pricelist type %s '
+                                          '' % (pricelist[1]))
+        return True
+
+    def main(self):
+        '''
+        Create Journals and all record related with the journals
+        '''
+        self.import_price_list()
+        self.import_price_list_version()
+        self.import_price_list_items()
 
 class ImportAccountsV6(object):
     '''
-    Import accounts from verion 6 of odoo
+    Import list from verion 6 of odoo
     '''
 
     def __init__(self, migration):
@@ -223,7 +413,6 @@ class ImportAccountsV6(object):
                                                          account_ids,
                                                          ['id', 'name',
                                                           'code',
-                                                          'currency_id',
                                                           'parent_id/id',
                                                           'user_type/id']
                                                         )['datas']:
@@ -231,7 +420,7 @@ class ImportAccountsV6(object):
                 result = self.migration.dest.execute('account.account',
                                                      'import_data',
                                                      ['id', 'name',
-                                                      'code', 'currency_id',
+                                                      'code',
                                                       'parent_id/id',
                                                       'user_type/id'],
                                                      [account])
@@ -438,5 +627,11 @@ if __name__ == '__main__':
 
     CI = MigrationTools()
     CI.main(CONFIGURATION)
-    ACCOUNT = ImportAccountsV6(CI)
-    ACCOUNT.main()
+    obj = ImportAccountsV6(CI)
+    obj.main()
+    obj = ImportJournalsV6(CI)
+    obj.main()
+    obj = ImportProductV6(CI)
+    obj.main()
+    obj = ImportListPriceV6(CI)
+    obj.main()
