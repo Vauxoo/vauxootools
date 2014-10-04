@@ -46,3 +46,4 @@ docs/_build
 
 #script logs
 *.log
+scripts/local.cfg
