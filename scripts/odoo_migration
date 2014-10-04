@@ -270,9 +270,9 @@ class ImportListPriceV6(object):
         '''
         model = 'product.pricelist.item'
         fields = ['id', 'name', 'price_version_id/id', 'base_pricelist_id/id',
-                  'min_quantity', 'base', 'price_discount',
+                  'min_quantity', 'base', 'price_discount', 'product_id/id',
                   'price_max_margin', 'price_min_margin', 'price_round',
-                  'sequence']
+                  'sequence', 'categ_id/id']
         pricelist_ids = self.migration.origin.search(model, [])
         for pricelist in self.migration.origin.execute(model, 'export_data',
                                                        pricelist_ids, fields
@@ -295,6 +295,91 @@ class ImportListPriceV6(object):
         self.import_price_list()
         self.import_price_list_version()
         self.import_price_list_items()
+
+class ImportFiscalYearsPeriods(object):
+    '''
+    Import list from verion 6 of odoo
+    '''
+
+    def __init__(self, migration):
+        '''
+        @param migration: Object with origin and destiny conection
+        '''
+        self.migration = migration
+
+    def import_journal_period(self):
+        '''
+        Import Fiscal Year
+        '''
+        model = 'account.journal.period'
+        fields = ['id', 'name', 'active', 'state', 'journal_id/id',
+                  'period_id/id']
+        account_ids = self.migration.origin.search(model, [])
+        for account in self.migration.origin.execute(model, 'export_data',
+                                                     account_ids,
+                                                     fields)['datas']:
+            result = self.migration.dest.execute(model, 'import_data', fields,
+                                                 [account])
+            if result[2]:
+                self.migration.loger.error('Error creating the Journal P %s '
+                                           'because %s' % (account[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the Journal P %s '
+                                          '' % (account[1]))
+        return True
+
+    def import_fiscal_years(self):
+        '''
+        Import Fiscal Year
+        '''
+        model = 'account.fiscalyear'
+        fields = ['id', 'name', 'code', 'date_start', 'date_stop', 'state']
+        account_ids = self.migration.origin.search(model, [])
+        for account in self.migration.origin.execute(model, 'export_data',
+                                                     account_ids,
+                                                     fields)['datas']:
+            result = self.migration.dest.execute(model, 'import_data', fields,
+                                                 [account])
+            if result[2]:
+                self.migration.loger.error('Error creating the year %s '
+                                           'because %s' % (account[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the Year %s '
+                                          '' % (account[1]))
+        return True
+
+    def import_period(self):
+        '''
+        Import Fiscal Year
+        '''
+        model = 'account.period'
+        fields = ['id', 'name', 'code', 'date_start', 'date_stop', 'state',
+                  'special', 'fiscalyear_id/id']
+        period_ids = self.migration.origin.search(model, [])
+        for period in self.migration.origin.execute(model, 'export_data',
+                                                    period_ids,
+                                                    fields)['datas']:
+            result = self.migration.dest.execute(model, 'import_data', fields,
+                                                 [period])
+            if result[2]:
+                self.migration.loger.error('Error creating the Period %s '
+                                           'because %s' % (period[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the Period %s '
+                                          '' % (period[1]))
+        return True
+
+    def main(self):
+        '''
+        Create the fiscal years and periods
+        '''
+        self.import_fiscal_years()
+        self.import_period()
+        self.import_journal_period()
+        return True
 
 class ImportAccountsV6(object):
     '''
@@ -427,6 +512,8 @@ if __name__ == '__main__':
     OBJ = ImportAccountsV6(CI)
     OBJ.main()
     OBJ = ImportJournalsV6(CI)
+    OBJ.main()
+    OBJ = ImportFiscalYearsPeriods(CI)
     OBJ.main()
     OBJ = ImportProductV6(CI)
     OBJ.main()
