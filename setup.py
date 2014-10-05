@@ -31,6 +31,7 @@ setup(
     ],
     scripts = [
         'scripts/openerp_verify',
+        'scripts/simpletimetracker',
     ],
     package_dir={'vauxootools': 'vauxootools'},
     include_package_data=True,
