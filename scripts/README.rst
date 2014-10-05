@@ -28,6 +28,10 @@ Then said this, for all command explained below you will need to do this steps.
        you have the cron_ from linux in your hand.
     
 
+Script Name: simpletimetracker.
+-------------------------------
+
+
 Script Name: openerp_verify.
 ----------------------------
 
