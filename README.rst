@@ -3,20 +3,17 @@ Vauxoo Tools
 ============
 
 .. image:: https://travis-ci.org/Vauxoo/vauxootools.svg?branch=master
-        :target: https://travis-ci.org/vauxoo/vauxootools
-
+    :target: https://travis-ci.org/Vauxoo/vauxootools
 
 Tools to work with python and Odoo.
 
 
 * Free software: BSD license
-* Documentation: http://vauxootools.vauxoo.com.
+* Documentation: http://vauxoo.github.io/vauxootools.
 
 Features
 --------
 
 * ConfigGlue ready pre-procesed with minimal parameters to work with an openerp
   xml-rpc script.
-TODO: Generate project page and a better self-explained base README for now you
-will need configure/read the documentation manually using sphinx.
 

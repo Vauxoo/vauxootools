@@ -4,6 +4,14 @@ vauxootools package
 Submodules
 ----------
 
+vauxootools.instance module
+---------------------------
+
+.. automodule:: vauxootools.instance
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 vauxootools.vauxootools module
 ------------------------------
 
