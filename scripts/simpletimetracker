@@ -14,12 +14,15 @@ usage:
 '''
 
 import os
+import sys
+import time
 import csv
 from datetime import datetime
 from timeit import default_timer
 from vauxootools.vauxootools import VauxooToolsServers
-from vauxootools.vauxootools import VxConfigServers
+from vauxootools.vauxootools import VxConfig
 from vauxootools.instance import Instance
+from configglue import schema
 from os.path import expanduser
 
 # Odoo Stuff to implement the connection
@@ -42,7 +45,8 @@ def connect(configuration):
                       username=user,
                       logger=configuration.logger)
     server = origin.server_login()
-    configuration.logger.info(configuration)
+    configuration.logger.info('Connected to : {hostname} as {user}'.format(
+        hostname=hostname, user=user))
     return server
 
 def write_local():
@@ -57,22 +61,73 @@ def write_local():
         spamwriter.writerow(['Spam', 'Lovely Spam', 'Wonderful Spam'])
     return True
 
-def run_app(server):
+def get_task(server, task_id):
+    return server.read('project.task', task_id, ['name', 'user_id'])
+
+def write_task(server, task_id, details, total):
+    return server.create('project.task.work',
+                        {'name': details, 'hours': total, 'task_id': task_id,
+                         'user_id': server.user.id,
+                         'date': time.strftime('%Y-%m-%d %H:%M:%S')})
+
+def write_issue(server, issue_id, details, total, project_id=False):
+    return server.create('project.task.work',
+                        {'name': details, 'hours': total, 'task_id': task_id,
+                         'user_id': server.user.id,
+                         'date': time.strftime('%Y-%m-%d %H:%M:%S')})
+
+def run_app(server, configuration):
     '''
     The main run element.
+    TODO: modularize to be importable, for now too much if's
     '''
     clock_start = default_timer()
     now = datetime.now()
-    what = "Doing something"
-    print "You started to do {what} at {now}".format(what=what, now=now)
+    what = configuration.params.get('message')
+    issue = configuration.params.get('issue')
+    task = configuration.params.get('task')
+    if not what:
+        configuration.logger.error('Can you tell what are you planning to do?\n'
+                                   'pass the --message parameter please')
+        sys.exit()
+    if not issue and not task:
+        configuration.logger.error('Ok, got it but Where will I load the task?:'
+                                   ' can you provide one task, issue or '
+                                   'project please')
+        sys.exit()
+    configuration.logger.info(
+        "You started do: {what}".format(what=what, now=now))
+    configuration.logger.info(
+        "And will be loaded on Task: {task_id} at: {details}".format(
+            task_id=what, details=get_task(server, int(task))))
     try:
         while True:
             clock_end = default_timer()
     except (KeyboardInterrupt, SystemExit):
-        m = "Dedicated {timer} seconds ".format(timer=clock_end - clock_start)
-        print m
+        time_taken = (clock_end-clock_start)/3600
+        # Asume that the minimal time to be setted in a task in 5 minutes
+        time_taken = time_taken < 0.08 and 0.08 or time_taken + 0.08
+        if task:
+        # Task here always will be correctly know due to L87
+            write_task(server, task and task or issue, what, time_taken)
+        if issue:
+        # Task here always will be correctly know due to L87
+            write_issue(server, issue, what, time_taken)
     except:
         raise
+
+class MyOptions(VxConfig):
+    issue = schema.StringOption(short_name='i',
+                                help='''Issue ID on your odoo db if False it'
+                                ' will look for Task ID''')
+    task = schema.IntOption(short_name='t',
+                                help='''Task ID on your odoo db if False it
+                                        will look for Issue Id''')
+    message = schema.StringOption(short_name='m',
+                                help='Message explaining what are you doing')
+    dbfile = schema.StringOption(short_name='d', default='~',
+                                help='''Where do you want record dbfile
+                                 'It will be a csv file ready to import''')
 
 if __name__ == '__main__':
     CONFIGURATION = VauxooToolsServers(
@@ -82,8 +137,11 @@ if __name__ == '__main__':
                  'hostname',
                  'password',
                  'port',
+                 'task',
+                 'message',
+                 'issue',
                  'username'],
         log=True,
-        vx_instance=VxConfigServers)
+        vx_instance=MyOptions)
 
-    run_app(connect(CONFIGURATION))
+    run_app(connect(CONFIGURATION), CONFIGURATION)
