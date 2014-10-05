@@ -26,7 +26,7 @@ class ImportJournalEntries(object):
         move_ids = self.migration.origin.search(model, [])
         for i in move_ids:
             for move in self.migration.origin.execute(model, 'export_data',
-                                                      i, fields)['datas']:
+                                                      [i], fields)['datas']:
                 result = self.migration.dest.execute(model, 'import_data',
                                                      fields, [move])
                 if result[2]:
@@ -47,7 +47,7 @@ class ImportJournalEntries(object):
         move_ids = self.migration.origin.search(model, [])
         for i in move_ids:
             for move in self.migration.origin.execute(model, 'export_data',
-                                                      i, fields)['datas']:
+                                                      [i], fields)['datas']:
                 result = self.migration.dest.execute(model, 'import_data',
                                                      fields, [move])
                 if result[2]:
@@ -73,7 +73,7 @@ class ImportJournalEntries(object):
         line_ids = self.migration.origin.search(model, [])
         for i in line_ids:
             for line in self.migration.origin.execute(model, 'export_data',
-                                                      i, fields)['datas']:
+                                                      [i], fields)['datas']:
                 if 'Valid' in line:
                     line.insert(line.index('Valid'), 'Balanced')
                     line.remove('Valid')
