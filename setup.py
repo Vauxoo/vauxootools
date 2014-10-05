@@ -20,12 +20,12 @@ history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
 setup(
     name='vauxootools',
-    version='0.1.0',
-    description='Tools to work with python and OpenERP',
+    version='0.1.8',
+    description='Tools to work with python and Odoo',
     long_description=readme + '\n\n' + history,
     author='Nhomar Hernandez',
-    author_email='nhomar@gmail.com',
-    url='https://github.com/nhomar/vauxootools',
+    author_email='nhomar@vauxoo.com',
+    url='https://github.com/vauxoo/vauxootools',
     packages=[
         'vauxootools',
     ],
@@ -47,8 +47,6 @@ setup(
         "Programming Language :: Python :: 2",
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
     ],
     test_suite='tests',
 )
