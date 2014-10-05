@@ -478,7 +478,7 @@ class ImportFiscalYearsPeriods(object):
         Import Fiscal Year
         '''
         model = 'account.fiscalyear'
-        fields = ['id', 'name', 'code', 'date_start', 'date_stop', 'state']
+        fields = ['id', 'name', 'code', 'date_start', 'date_stop']
         account_ids = self.migration.origin.search(model, [])
         for account in self.migration.origin.execute(model, 'export_data',
                                                      account_ids,
@@ -499,7 +499,7 @@ class ImportFiscalYearsPeriods(object):
         Import Fiscal Year
         '''
         model = 'account.period'
-        fields = ['id', 'name', 'code', 'date_start', 'date_stop', 'state',
+        fields = ['id', 'name', 'code', 'date_start', 'date_stop',
                   'special', 'fiscalyear_id/id']
         period_ids = self.migration.origin.search(model, [])
         for period in self.migration.origin.execute(model, 'export_data',
@@ -752,6 +752,6 @@ if __name__ == '__main__':
   #  OBJ.main()
   #  OBJ = ImportListPriceV6(CI)
   #  OBJ.main()
-    importpartnersv6(CI)
+  #  importpartnersv6(CI)
     OBJ = ImportJournalEntries(CI)
     OBJ.main()
