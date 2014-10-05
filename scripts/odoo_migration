@@ -2,6 +2,7 @@
 from vauxootools.vauxootools import VauxooToolsServers
 from vauxootools.vauxootools import VxConfigServers
 from vauxootools.instance import Instance
+import re
 
 
 class ImportJournalsV6(object):
@@ -172,7 +173,7 @@ class ImportProductV6(object):
         fields = ['id', 'name', 'type', 'default_code', 'list_price',
                   'standard_price', 'active', 'warranty', 'description_sale',
                   'categ_id/id']
-        product_ids = self.migration.origin.search(model, [])
+        product_ids = self.migration.origin.search(model, [], limit=1)
         no_create = {}
         for product in self.migration.origin.execute('product.product',
                                                      'export_data',
@@ -235,7 +236,7 @@ class ImportListPriceV6(object):
                                                  fields,
                                                  [pricelist])
             if result[2]:
-                self.migration.loger.error('Error creating the type %s '
+                self.migration.loger.error('Error creating the PriceList %s '
                                            'because %s' % (pricelist[1],
                                                            result[2]))
             else:
@@ -256,7 +257,7 @@ class ImportListPriceV6(object):
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [pricelist])
             if result[2]:
-                self.migration.loger.error('Error creating the type %s '
+                self.migration.loger.error('Error creating the Version %s '
                                            'because %s' % (pricelist[1],
                                                            result[2]))
             else:
@@ -280,7 +281,7 @@ class ImportListPriceV6(object):
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [pricelist])
             if result[2]:
-                self.migration.loger.error('Error creating the type %s '
+                self.migration.loger.error('Error creating the Item %s '
                                            'because %s' % (pricelist[1],
                                                            result[2]))
             else:
@@ -381,6 +382,82 @@ class ImportFiscalYearsPeriods(object):
         self.import_journal_period()
         return True
 
+def importpartnersv6(migration):
+    '''
+    Import Partners from verion 6 of odoo
+    '''
+
+    model = 'res.partner'
+    model2 = 'res.partner.address'
+    fields_p = ['id', 'name', 'credit', 'vat',
+                'credit_limit', 'debit', 'debit_limit', 'email', 'mobile',
+                'phone', 'property_account_payable/id',
+                'property_account_receivable/id',
+                'property_product_pricelist/id',
+                'property_product_pricelist_purchase/id', 'customer',
+                'supplier']
+    fields_a = ['city', 'type', 'street', 'street2', 'fax',
+                'zip', 'country_id']
+    fields_c = ['id', 'name', 'fax', 'mobile', 'street', 'street2',
+                'country_id', 'type', 'partner_id/id']
+    fields_c8 = ['id', 'name', 'fax', 'mobile', 'street', 'street2',
+                 'country_id', 'type', 'parent_id/id']
+
+    for partner in migration.origin.search(model, []):
+
+        partner_list = migration.origin.execute(model, 'export_data',
+                                                [partner],
+                                                fields_p)['datas']
+        contact = migration.origin.search(model2,
+                                          [('partner_id', '=', partner),
+                                           ('type', '=', 'invoice')],
+                                          limit=1)
+        partner_list = partner_list[0]
+        fields = False
+        if contact:
+            partner_list += migration.origin.execute(model2, 'export_data',
+                                                     contact,
+                                                     fields_a)['datas'][0]
+            fields = fields_p+fields_a
+        else:
+            contact = migration.origin.search(model2,
+                                              [('partner_id', '=', partner)],
+                                              limit=1)
+            if contact:
+                partner_list += migration.origin.execute(model2, 'export_data',
+                                                         contact,
+                                                         fields_a)['datas'][0]
+                fields = fields_p+fields_a
+
+
+        result = migration.dest.execute(model, 'import_data', fields or \
+                                        fields_p, [partner_list])
+        if result[2]:
+            migration.loger.error('Error creating the type %s '
+                                  'because %s' % (partner_list[1], result[2]))
+        else:
+            migration.loger.info('Created the partner  %s '
+                                 '' % (partner_list[1]))
+        contact = contact and migration.origin. search(model2, [('partner_id',
+                                                                 '=', partner),
+                                                                ('id', '!=',
+                                                                 contact[0])])
+        for con in contact and migration.origin.execute(model2, 'export_data',
+                                                        contact,
+                                                        fields_c)['datas']:
+            if con[1] == False:
+                con.pop(1)
+                con.insert(1, partner_list[1])
+            result = migration.dest.execute(model, 'import_data', fields_c8,
+                                            [con])
+            if result[2]:
+                migration.loger.error('Error creating the Contac %s '
+                                      'because %s' % (con[1], result[2]))
+            else:
+                migration.loger.info('Created the Contact  %s '
+                                     '' % (con[1]))
+    return True
+
 class ImportAccountsV6(object):
     '''
     Import list from verion 6 of odoo
@@ -470,6 +547,17 @@ class MigrationTools(object):
         self.dest = False
         self.loger = False
 
+    @staticmethod
+    def get_id(xml_id):
+        '''
+        Extract the id from xml_id
+        @param xml_id: String with the xml_id of a record
+        '''
+        id_record = re.findall(r'\d+', xml_id)
+        if id_record:
+            return int(id_record[0])
+        return 0
+
     def main(self, configuration):
         '''
         Get variables of the configuration object
@@ -509,13 +597,14 @@ if __name__ == '__main__':
 
     CI = MigrationTools()
     CI.main(CONFIGURATION)
-    OBJ = ImportAccountsV6(CI)
-    OBJ.main()
-    OBJ = ImportJournalsV6(CI)
-    OBJ.main()
-    OBJ = ImportFiscalYearsPeriods(CI)
-    OBJ.main()
-    OBJ = ImportProductV6(CI)
-    OBJ.main()
-    OBJ = ImportListPriceV6(CI)
-    OBJ.main()
+  #  OBJ = ImportAccountsV6(CI)
+  #  OBJ.main()
+  #  OBJ = ImportJournalsV6(CI)
+  #  OBJ.main()
+  #  OBJ = ImportFiscalYearsPeriods(CI)
+  #  OBJ.main()
+  #  OBJ = ImportProductV6(CI)
+  #  OBJ.main()
+  #  OBJ = ImportListPriceV6(CI)
+  #  OBJ.main()
+    importpartnersv6(CI)
