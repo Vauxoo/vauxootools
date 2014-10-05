@@ -17,30 +17,49 @@ class ImportJournalEntries(object):
         '''
         self.migration = migration
 
-    def create_account_move(self, period):
+    def create_account_move_reconcile(self):
+        '''
+        Create Reconciles
+        '''
+        model = 'account.move.reconcile'
+        fields = ['id', 'name', 'create_date', 'type']
+        move_ids = self.migration.origin.search(model, [])
+        for i in move_ids:
+            for move in self.migration.origin.execute(model, 'export_data',
+                                                      i, fields)['datas']:
+                result = self.migration.dest.execute(model, 'import_data',
+                                                     fields, [move])
+                if result[2]:
+                    self.migration.loger.error('Error creating the Reconcile '
+                                               '%s because %s' % (move[1],
+                                                                  result[2]))
+                else:
+                    self.migration.loger.info('Created the Reconcile  %s '
+                                              '' % (move[1]))
+        return True
+    def create_account_move(self):
         '''
         Create Journal Entries
         '''
         model = 'account.move'
         fields = ['id', 'name', 'journal_id/id', 'ref', 'period_id/id', 'date',
                   'to_check', 'partner_id/id', 'state', 'balance', 'narration']
-        move_ids = self.migration.origin.search(model,
-                                                [('period_id', '=', period)])
-        for move in self.migration.origin.execute(model, 'export_data',
-                                                  move_ids,
-                                                  fields)['datas']:
-            result = self.migration.dest.execute(model, 'import_data', fields,
-                                                 [move])
-            if result[2]:
-                self.migration.loger.error('Error creating the Move %s '
-                                           'because %s' % (move[1],
-                                                           result[2]))
-            else:
-                self.migration.loger.info('Created the Move  %s '
-                                          '' % (move[1]))
+        move_ids = self.migration.origin.search(model, [])
+        for i in move_ids:
+            for move in self.migration.origin.execute(model, 'export_data',
+                                                      i, fields)['datas']:
+                result = self.migration.dest.execute(model, 'import_data',
+                                                     fields, [move])
+                if result[2]:
+                    self.migration.loger.error('Error creating the Move %s '
+                                               'because %s' % (move[1],
+                                                               result[2]))
+                else:
+                    self.migration.loger.info('Created the Move  %s '
+                                              '' % (move[1]))
         return True
 
-    def create_account_move_line(self, period):
+    def create_account_move_line(self):
         '''
         Create Journal Entries
         '''
@@ -49,32 +68,33 @@ class ImportJournalEntries(object):
                   'partner_id/id', 'state', 'balance', 'narration',
                   'account_id/id', 'amount_currency', 'amount_residual',
                   'amount_residual_currency', 'currency_id/id', 'credit',
-                  'debit', 'move_id/id']
-        line_ids = self.migration.origin.search(model,
-                                                [('period_id', '=', period)])
-        for line in self.migration.origin.execute(model, 'export_data',
-                                                  line_ids, fields)['datas']:
-            if 'Valid' in line:
-                line.insert(line.index('Valid'), 'Balanced')
-                line.remove('Valid')
-            result = self.migration.dest.execute(model, 'import_data', fields,
-                                                 [line])
-            if result[2]:
-                self.migration.loger.error('Error creating the line %s '
-                                           'because %s' % (line[1],
-                                                           result[2]))
-            else:
-                self.migration.loger.info('Created the line  %s '
-                                          '' % (line[1]))
+                  'debit', 'move_id/id', 'reconcile_id/id',
+                  'reconcile_partial_id/id']
+        line_ids = self.migration.origin.search(model, [])
+        for i in line_ids:
+            for line in self.migration.origin.execute(model, 'export_data',
+                                                      i, fields)['datas']:
+                if 'Valid' in line:
+                    line.insert(line.index('Valid'), 'Balanced')
+                    line.remove('Valid')
+                result = self.migration.dest.execute(model, 'import_data',
+                                                     fields, [line])
+                if result[2]:
+                    self.migration.loger.error('Error creating the line %s '
+                                               'because %s' % (line[1],
+                                                               result[2]))
+                else:
+                    self.migration.loger.info('Created the line  %s '
+                                              '' % (line[1]))
         return True
 
     def main(self):
         '''
         Create the Account Moves and their Lines
         '''
-        for i in self.migration.origin.search('account.period', []):
-            self.create_account_move(i)
-            self.create_account_move_line(i)
+        self.create_account_move()
+        self.create_account_move_reconcile()
+        self.create_account_move_line()
 
         return True
 class ImportCurrency(object):
