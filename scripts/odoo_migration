@@ -16,29 +16,29 @@ class ImportJournalEntries(object):
         @param migration: Object with origin and destiny conection
         '''
         self.migration = migration
-        self.period_id = 1
 
     def create_account_move(self):
         '''
         Create Journal Entries
         '''
         model = 'account.move'
-        move_ids = self.migration.origin.search(model, [('period_id', '=',
-                                                         self.period_id)])
         fields = ['id', 'name', 'journal_id/id', 'ref', 'period_id/id', 'date',
                   'to_check', 'partner_id/id', 'state', 'balance', 'narration']
-        for move in self.migration.origin.execute(model, 'export_data',
-                                                  move_ids,
-                                                  fields)['datas']:
-            result = self.migration.dest.execute(model, 'import_data', fields,
-                                                 [move])
-            if result[2]:
-                self.migration.loger.error('Error creating the Move %s '
-                                           'because %s' % (move[1],
-                                                           result[2]))
-            else:
-                self.migration.loger.info('Created the Move  %s '
-                                          '' % (move[1]))
+        for i in self.migration.origin.search('account.period', []):
+            move_ids = self.migration.origin.search(model,
+                                                    [('period_id', '=', i)])
+            for move in self.migration.origin.execute(model, 'export_data',
+                                                      move_ids,
+                                                      fields)['datas']:
+                result = self.migration.dest.execute(model, 'import_data',
+                                                     fields, [move])
+                if result[2]:
+                    self.migration.loger.error('Error creating the Move %s '
+                                               'because %s' % (move[1],
+                                                               result[2]))
+                else:
+                    self.migration.loger.info('Created the Move  %s '
+                                              '' % (move[1]))
         return True
 
     def create_account_move_line(self):
@@ -46,28 +46,29 @@ class ImportJournalEntries(object):
         Create Journal Entries
         '''
         model = 'account.move.line'
-        line_ids = self.migration.origin.search(model, [('period_id', '=',
-                                                         self.period_id)])
         fields = ['id', 'name', 'journal_id/id', 'ref', 'period_id/id', 'date',
                   'partner_id/id', 'state', 'balance', 'narration',
                   'account_id/id', 'amount_currency', 'amount_residual',
                   'amount_residual_currency', 'currency_id/id', 'credit',
                   'debit', 'move_id/id']
-        for line in self.migration.origin.execute(model, 'export_data',
-                                                  line_ids,
-                                                  fields)['datas']:
-            if 'Valid' in line:
-                line.insert(line.index('Valid'), 'Balanced')
-                line.remove('Valid')
-            result = self.migration.dest.execute(model, 'import_data', fields,
-                                                 [line])
-            if result[2]:
-                self.migration.loger.error('Error creating the line %s '
-                                           'because %s' % (line[1],
-                                                           result[2]))
-            else:
-                self.migration.loger.info('Created the line  %s '
-                                          '' % (line[1]))
+        for i in self.migration.origin.search('account.period', []):
+            line_ids = self.migration.origin.search(model,
+                                                    [('period_id', '=', i)])
+            for line in self.migration.origin.execute(model, 'export_data',
+                                                      line_ids,
+                                                      fields)['datas']:
+                if 'Valid' in line:
+                    line.insert(line.index('Valid'), 'Balanced')
+                    line.remove('Valid')
+                result = self.migration.dest.execute(model, 'import_data',
+                                                     fields, [line])
+                if result[2]:
+                    self.migration.loger.error('Error creating the line %s '
+                                               'because %s' % (line[1],
+                                                               result[2]))
+                else:
+                    self.migration.loger.info('Created the line  %s '
+                                              '' % (line[1]))
         return True
 
     def main(self):
@@ -743,8 +744,6 @@ if __name__ == '__main__':
     CI.main(CONFIGURATION)
   #  OBJ = ImportCurrency(CI)
   #  OBJ.main()
-    OBJ = ImportJournalEntries(CI)
-    OBJ.main()
   #  OBJ = ImportAccountsV6(CI)
   #  OBJ.main()
   #  OBJ = ImportJournalsV6(CI)
@@ -756,3 +755,5 @@ if __name__ == '__main__':
   #  OBJ = ImportListPriceV6(CI)
   #  OBJ.main()
     importpartnersv6(CI)
+    OBJ = ImportJournalEntries(CI)
+    OBJ.main()
