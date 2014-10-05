@@ -16,13 +16,15 @@ class ImportJournalEntries(object):
         @param migration: Object with origin and destiny conection
         '''
         self.migration = migration
+        self.period_id = 1
 
     def create_account_move(self):
         '''
         Create Journal Entries
         '''
         model = 'account.move'
-        move_ids = self.migration.origin.search(model, [], limit=100)
+        move_ids = self.migration.origin.search(model, [('period_id', '=',
+                                                         self.period_id)])
         fields = ['id', 'name', 'journal_id/id', 'ref', 'period_id/id', 'date',
                   'to_check', 'partner_id/id', 'state', 'balance', 'narration']
         for move in self.migration.origin.execute(model, 'export_data',
@@ -44,7 +46,8 @@ class ImportJournalEntries(object):
         Create Journal Entries
         '''
         model = 'account.move.line'
-        line_ids = self.migration.origin.search(model, [], limit=300)
+        line_ids = self.migration.origin.search(model, [('period_id', '=',
+                                                         self.period_id)])
         fields = ['id', 'name', 'journal_id/id', 'ref', 'period_id/id', 'date',
                   'partner_id/id', 'state', 'balance', 'narration',
                   'account_id/id', 'amount_currency', 'amount_residual',
