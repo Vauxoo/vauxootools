@@ -3,7 +3,148 @@ from vauxootools.vauxootools import VauxooToolsServers
 from vauxootools.vauxootools import VxConfigServers
 from vauxootools.instance import Instance
 import re
+import time
 
+
+class ImportJournalEntries(object):
+    '''
+    Import Journal Entries between differents version of Odoo
+    '''
+
+    def __init__(self, migration):
+        '''
+        @param migration: Object with origin and destiny conection
+        '''
+        self.migration = migration
+
+    def create_account_move(self):
+        '''
+        Create Journal Entries
+        '''
+        model = 'account.move'
+        move_ids = self.migration.origin.search(model, [], limit=100)
+        fields = ['id', 'name', 'journal_id/id', 'ref', 'period_id/id', 'date',
+                  'to_check', 'partner_id/id', 'state', 'balance', 'narration']
+        for move in self.migration.origin.execute(model, 'export_data',
+                                                  move_ids,
+                                                  fields)['datas']:
+            result = self.migration.dest.execute(model, 'import_data', fields,
+                                                 [move])
+            if result[2]:
+                self.migration.loger.error('Error creating the Move %s '
+                                           'because %s' % (move[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the Move  %s '
+                                          '' % (move[1]))
+        return True
+
+    def create_account_move_line(self):
+        '''
+        Create Journal Entries
+        '''
+        model = 'account.move.line'
+        line_ids = self.migration.origin.search(model, [], limit=300)
+        fields = ['id', 'name', 'journal_id/id', 'ref', 'period_id/id', 'date',
+                  'partner_id/id', 'state', 'balance', 'narration',
+                  'account_id/id', 'amount_currency', 'amount_residual',
+                  'amount_residual_currency', 'currency_id/id', 'credit',
+                  'debit', 'move_id/id']
+        for line in self.migration.origin.execute(model, 'export_data',
+                                                  line_ids,
+                                                  fields)['datas']:
+            if 'Valid' in line:
+                line.insert(line.index('Valid'), 'Balanced')
+                line.remove('Valid')
+            result = self.migration.dest.execute(model, 'import_data', fields,
+                                                 [line])
+            if result[2]:
+                self.migration.loger.error('Error creating the line %s '
+                                           'because %s' % (line[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the line  %s '
+                                          '' % (line[1]))
+        return True
+
+    def main(self):
+        '''
+        Create the Account Moves and their Lines
+        '''
+        self.create_account_move()
+        self.create_account_move_line()
+
+        return True
+class ImportCurrency(object):
+    '''
+    Import Currency from verion 6 of odoo
+    '''
+
+    def __init__(self, migration):
+        '''
+        @param migration: Object with origin and destiny conection
+        '''
+        self.migration = migration
+
+    def create_currency(self):
+        '''
+        Create currencies
+        '''
+        model = 'res.currency'
+        currency_ids = self.migration.origin.\
+                                    search(model,
+                                           [])
+        fields = ['id', 'name', 'rate', 'rounding', 'symbol', 'accuracy',
+                  'position', 'base']
+        for currency in self.migration.origin.execute(model,
+                                                      'export_data',
+                                                      currency_ids,
+                                                      fields)['datas']:
+            result = self.migration.dest.execute(model,
+                                                 'import_data',
+                                                 fields,
+                                                 [currency])
+            if result[2]:
+                self.migration.loger.error('Error creating the Currency %s '
+                                           'because %s' % (currency[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the Currency  %s '
+                                          '' % (currency[1]))
+        return True
+
+
+    def create_currency_rate(self):
+        '''
+        Create currency rate
+        '''
+        model = 'res.currency.rate'
+        currency_ids = self.migration.origin.search(model, [])
+        fields = ['id', 'name', 'currency_id/id', 'rate']
+        for currency in self.migration.origin.execute(model, 'export_data',
+                                                      currency_ids,
+                                                      fields)['datas']:
+            name = time.strftime(currency[1] + ' %H:%M:%S')
+            currency.pop(1)
+            currency.insert(1, name)
+            result = self.migration.dest.execute(model, 'import_data', fields,
+                                                 [currency])
+            if result[2]:
+                self.migration.loger.error('Error creating the Rate%s '
+                                           'because %s' % (currency[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the Rate %s '
+                                          '' % (currency[1]))
+        return True
+
+    def main(self):
+        '''
+        Create the currencies for the company
+        '''
+        self.create_currency()
+        self.create_currency_rate()
+        return True
 
 class ImportJournalsV6(object):
     '''
@@ -597,6 +738,10 @@ if __name__ == '__main__':
 
     CI = MigrationTools()
     CI.main(CONFIGURATION)
+  #  OBJ = ImportCurrency(CI)
+  #  OBJ.main()
+    OBJ = ImportJournalEntries(CI)
+    OBJ.main()
   #  OBJ = ImportAccountsV6(CI)
   #  OBJ.main()
   #  OBJ = ImportJournalsV6(CI)
