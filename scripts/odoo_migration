@@ -1,4 +1,8 @@
 #! /usr/bin/env python
+"""
+Script with a serie of methods and classes to migrate date from differents
+versions of Odoo
+"""
 from vauxootools.vauxootools import VauxooToolsServers
 from vauxootools.vauxootools import VxConfigServers
 from vauxootools.instance import Instance
@@ -549,6 +553,97 @@ class ImportFiscalYearsPeriods(object):
         self.import_journal_period()
         return True
 
+
+class ImportPaymentTerm(object):
+    '''
+    Import Payment Terms
+    '''
+
+    def __init__(self, migration):
+        '''
+        @param migration: Object with origin and destiny conection
+        '''
+        self.migration = migration
+
+    def import_payment_terms(self):
+        '''
+        Import Payment Terms
+        '''
+        model = 'account.payment.term'
+        fields = ['id', 'name', 'note']
+        account_ids = self.migration.origin.search(model, [])
+        for account in self.migration.origin.execute(model, 'export_data',
+                                                     account_ids,
+                                                     fields)['datas']:
+            result = self.migration.dest.execute(model, 'import_data', fields,
+                                                 [account])
+            if result[2]:
+                self.migration.loger.error('Error creating the Term %s '
+                                           'because %s' % (account[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the Term %s '
+                                          '' % (account[1]))
+        return True
+
+    def import_payment_term_line(self):
+        '''
+        Import Payment Terms Line
+        '''
+        model = 'account.payment.term.line'
+        fields = ['id', 'days', 'days2', 'payment_id/id', 'value_amount',
+                  'value']
+        account_ids = self.migration.origin.search(model, [])
+        for account in self.migration.origin.execute(model, 'export_data',
+                                                     account_ids,
+                                                     fields)['datas']:
+            result = self.migration.dest.execute(model, 'import_data', fields,
+                                                 [account])
+            print result
+            if result[2]:
+                self.migration.loger.error('Error creating the Term Line %s '
+                                           'because %s' % (account[1],
+                                                           result[2]))
+            else:
+                self.migration.loger.info('Created the Term Line%s '
+                                          '' % (account[1]))
+        return True
+
+
+    def main(self):
+        '''
+        Create the payments tems
+        '''
+        self.import_payment_terms()
+        self.import_payment_term_line()
+        return True
+
+
+def importusers(migration):
+    '''
+    Import Users from verion 6 of odoo
+    '''
+
+    model = 'res.users'
+    fields = ['id', 'name', 'login', 'password']
+
+    for users in migration.origin.search(model, []):
+
+        users_list = migration.origin.execute(model, 'export_data',
+                                              [users],
+                                              fields)['datas']
+
+
+        result = migration.dest.execute(model, 'import_data', fields or \
+                                        fields, users_list)
+        if result[2]:
+            migration.loger.error('Error creating the user %s '
+                                  'because %s' % (users_list[0][1], result[2]))
+        else:
+            migration.loger.info('Created the user  %s '
+                                 '' % (users_list[0][1]))
+    return True
+
 def importpartnersv6(migration):
     '''
     Import Partners from verion 6 of odoo
@@ -560,6 +655,7 @@ def importpartnersv6(migration):
                 'credit_limit', 'debit', 'debit_limit', 'email', 'mobile',
                 'phone', 'property_account_payable/id',
                 'property_account_receivable/id',
+                'property_payment_term/id',
                 'property_product_pricelist/id',
                 'property_product_pricelist_purchase/id', 'customer',
                 'supplier']
@@ -768,14 +864,15 @@ if __name__ == '__main__':
   #  OBJ.main()
   #  OBJ = ImportAccountsV6(CI)
   #  OBJ.main()
-    OBJ = ImportJournalsV6(CI)
-    OBJ.main()
-    OBJ = ImportFiscalYearsPeriods(CI)
-    OBJ.main()
+  #  OBJ = ImportJournalsV6(CI)
+  #  OBJ.main()
+  #  OBJ = ImportFiscalYearsPeriods(CI)
+  #  OBJ.main()
   #  OBJ = ImportProductV6(CI)
   #  OBJ.main()
   #  OBJ = ImportListPriceV6(CI)
   #  OBJ.main()
-  #  importpartnersv6(CI)
-    OBJ = ImportJournalEntries(CI)
+    importpartnersv6(CI)
+    #importusers(CI)
+    OBJ = ImportPaymentTerm(CI)
     OBJ.main()
