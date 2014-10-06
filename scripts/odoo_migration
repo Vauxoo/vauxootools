@@ -23,10 +23,12 @@ class ImportJournalEntries(object):
         '''
         model = 'account.move.reconcile'
         fields = ['id', 'name', 'create_date', 'type']
-        move_ids = self.migration.origin.search(model, [])
+        move_ids = self.migration.origin.search(model, [], limit=1)
         for i in move_ids:
             for move in self.migration.origin.execute(model, 'export_data',
                                                       [i], fields)['datas']:
+                move.insert(2, move[2].split(' ')[0])
+                move.pop(3)
                 result = self.migration.dest.execute(model, 'import_data',
                                                      fields, [move])
                 if result[2]:
@@ -37,14 +39,15 @@ class ImportJournalEntries(object):
                     self.migration.loger.info('Created the Reconcile  %s '
                                               '' % (move[1]))
         return True
-    def create_account_move(self):
+    def create_account_move(self, period):
         '''
         Create Journal Entries
         '''
         model = 'account.move'
         fields = ['id', 'name', 'journal_id/id', 'ref', 'period_id/id', 'date',
-                  'to_check', 'partner_id/id', 'state', 'balance', 'narration']
-        move_ids = self.migration.origin.search(model, [])
+                  'to_check', 'partner_id/id', 'balance', 'narration', 'state']
+        move_ids = self.migration.origin.search(model,
+                                                [('period_id', '=', period)])
         for i in move_ids:
             for move in self.migration.origin.execute(model, 'export_data',
                                                       [i], fields)['datas']:
@@ -59,18 +62,19 @@ class ImportJournalEntries(object):
                                               '' % (move[1]))
         return True
 
-    def create_account_move_line(self):
+    def create_account_move_line(self, period):
         '''
         Create Journal Entries
         '''
         model = 'account.move.line'
         fields = ['id', 'name', 'journal_id/id', 'ref', 'period_id/id', 'date',
-                  'partner_id/id', 'state', 'balance', 'narration',
+                  'partner_id/id', 'balance', 'narration',
                   'account_id/id', 'amount_currency', 'amount_residual',
                   'amount_residual_currency', 'currency_id/id', 'credit',
                   'debit', 'move_id/id', 'reconcile_id/id',
-                  'reconcile_partial_id/id']
-        line_ids = self.migration.origin.search(model, [])
+                  'reconcile_partial_id/id', 'state']
+        line_ids = self.migration.origin.search(model,
+                                                [('period_id', '=', period)])
         for i in line_ids:
             for line in self.migration.origin.execute(model, 'export_data',
                                                       [i], fields)['datas']:
@@ -92,9 +96,10 @@ class ImportJournalEntries(object):
         '''
         Create the Account Moves and their Lines
         '''
-        self.create_account_move()
         self.create_account_move_reconcile()
-        self.create_account_move_line()
+        for i in self.migration.origin.search('account.period', []):
+            self.create_account_move(i)
+            self.create_account_move_line(i)
 
         return True
 class ImportCurrency(object):
@@ -476,8 +481,7 @@ class ImportFiscalYearsPeriods(object):
         Import Fiscal Year
         '''
         model = 'account.journal.period'
-        fields = ['id', 'name', 'active', 'state', 'journal_id/id',
-                  'period_id/id']
+        fields = ['id', 'name', 'active', 'journal_id/id', 'period_id/id']
         account_ids = self.migration.origin.search(model, [])
         for account in self.migration.origin.execute(model, 'export_data',
                                                      account_ids,
@@ -764,10 +768,10 @@ if __name__ == '__main__':
   #  OBJ.main()
   #  OBJ = ImportAccountsV6(CI)
   #  OBJ.main()
-  #  OBJ = ImportJournalsV6(CI)
-  #  OBJ.main()
-  #  OBJ = ImportFiscalYearsPeriods(CI)
-  #  OBJ.main()
+    OBJ = ImportJournalsV6(CI)
+    OBJ.main()
+    OBJ = ImportFiscalYearsPeriods(CI)
+    OBJ.main()
   #  OBJ = ImportProductV6(CI)
   #  OBJ.main()
   #  OBJ = ImportListPriceV6(CI)
